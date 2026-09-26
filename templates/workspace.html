@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUMMARIX AI | Study Workspace</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="topbar">
+    <a class="logo" href="{{ url_for('workspace') }}">SUMMARIX <span>AI</span></a>
+    <button class="open-chat" id="openChat">✦ Open AI Copilot</button>
+</header>
+
+<main class="workspace">
+    <section class="hero"><p>AI POWERED LEARNING WORKSPACE</p><h1>Understand documents <span>faster.</span></h1><small>Summarize, rewrite, study, and chat with your learning materials.</small></section>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <div class="workspace-grid">
+        <section class="panel tool-panel">
+            <div class="panel-heading"><div><p>DOCUMENT STUDIO</p><h2>Generate from your file</h2></div><span>⌁</span></div>
+            <form method="POST" enctype="multipart/form-data">
+                <label class="file-drop"><input type="file" name="document" accept=".pdf,.docx"><b>Upload PDF or DOCX</b><small>Maximum file size: 25 MB</small></label>
+                {% if document_name %}<div class="file-status">● {{ document_name }}</div>{% endif %}
+                <label>Choose tool</label>
+                <select name="tool" id="tool"><option value="summary" {% if active_tool == 'summary' %}selected{% endif %}>Document Summary</option><option value="paraphraser" {% if active_tool == 'paraphraser' %}selected{% endif %}>Paraphraser</option><option value="key_points" {% if active_tool == 'key_points' %}selected{% endif %}>Key Points</option><option value="important_questions" {% if active_tool == 'important_questions' %}selected{% endif %}>Important Questions</option></select>
+                <div class="tool-options" id="summaryOptions"><label>Summary length</label><select name="summary_length"><option value="short">Short</option><option value="medium" selected>Medium</option><option value="long">Detailed</option></select><label>Summary style</label><select name="summary_style"><option value="paragraph">Paragraphs</option><option value="bullet">Bullet points</option></select></div>
+                <div class="tool-options hidden" id="paraphraseOptions"><label>Writing style</label><select name="paraphrase_style"><option value="simple">Simple</option><option value="professional">Professional</option><option value="academic">Academic</option><option value="creative">Creative</option></select></div>
+                <div class="tool-options hidden" id="questionOptions"><label>Number of questions</label><select name="question_count"><option value="5">5</option><option value="10" selected>10</option><option value="15">15</option><option value="20">20</option></select></div>
+                <label>Additional instructions</label><textarea name="custom_query" placeholder="Example: Explain simply with bullet points.">{{ custom_query }}</textarea>
+                <button class="generate" type="submit">Generate with AI <span>→</span></button>
+            </form>
+        </section>
+        <section class="panel result-panel">
+            <div class="panel-heading"><div><p>OUTPUT</p><h2>Generated result</h2></div>{% if result %}<button class="small-btn" id="copyResult">Copy</button>{% endif %}</div>
+            {% if result %}
+                <article class="result" id="resultText">{{ result }}</article>
+                <div class="document-question"><h3>Ask your document</h3><textarea id="documentQuestion" placeholder="Ask a question about your uploaded document..."></textarea><button class="secondary" id="askDocument">Ask document</button><div class="document-answer hidden" id="documentAnswer"></div></div>
+            {% else %}
+                <div class="empty"><i>✦</i><h3>Your output will appear here</h3><p>Upload a document, choose a tool, and generate your first result.</p></div>
+            {% endif %}
+        </section>
+    </div>
+</main>
+
+<button class="chat-fab" id="chatFab" aria-label="Open SUMMARIX AI Copilot"><span>✦</span><b>AI Copilot</b></button>
+
+<aside class="copilot hidden" id="copilot">
+    <div class="copilot-header"><div class="bot-mark">✦</div><div><strong>SUMMARIX AI Copilot</strong><small><i></i> Ready to help</small></div><button id="closeChat" aria-label="Close chat">×</button></div>
+    <div class="copilot-layout">
+        <aside class="chat-sidebar">
+            <button class="new-chat" id="newChat">＋ New chat</button>
+            <div class="sidebar-title">RECENT CHATS <button id="clearHistory">Clear</button></div><div class="history" id="history"></div>
+            <div class="sidebar-title">DOCUMENTS</div><label class="add-files">＋ Add PDF / DOCX<input type="file" id="chatFiles" accept=".pdf,.docx" multiple></label><div class="doc-list" id="docList"></div>
+            <button class="privacy" id="privacyClear">⌫ Clear private data</button>
+        </aside>
+        <section class="chat-main">
+<div class="mode-bar">
+    <button data-mode="general" class="mode active">General</button>
+    <button data-mode="document" class="mode">Document</button>
+    <button data-mode="query" class="mode">Query Engine</button>
+    <button data-mode="study" class="mode">Study</button>
+    <button id="settingsButton" class="settings">⚙</button>
+</div>
+            <div class="settings-panel hidden" id="settingsPanel"><label>Language <select id="language"><option>English</option><option>Hindi</option><option>Kannada</option><option>Tamil</option><option>Telugu</option></select></label><label>Response depth <select id="detail"><option value="concise">Concise</option><option value="balanced" selected>Balanced</option><option value="detailed">Detailed</option></select></label></div>
+            <div class="suggestions" id="suggestions"><button>Explain a topic simply</button><button>Make a study plan</button><button>Help me write code</button><button>Recommend learning videos</button></div>
+            <div class="messages" id="messages"></div>
+            <div class="study-actions hidden" id="studyActions"><button data-action="quiz">Create Quiz</button><button data-action="flashcards">Flashcards</button><button data-action="revision">Revision Plan</button><button data-action="explain">Explain Simply</button></div>
+            <div class="chat-composer"><textarea id="chatInput" placeholder="Ask anything…"></textarea><div><button id="voiceButton" title="Voice input">🎙</button><button id="videoButton">▶ Videos</button><button id="exportButton">Export</button><button class="send" id="sendButton">Send ↑</button></div></div>
+        </section>
+    </div>
+</aside>
+
+<script>
+const $ = id => document.getElementById(id);
+const api = async (url, options={}) => { const response = await fetch(url, options); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || "Something went wrong."); return data; };
+const tool = $("tool"), modes = document.querySelectorAll(".mode");
+function toolOptions(){ $("summaryOptions").classList.toggle("hidden",tool.value!=="summary"); $("paraphraseOptions").classList.toggle("hidden",tool.value!=="paraphraser"); $("questionOptions").classList.toggle("hidden",tool.value!=="important_questions"); }
+tool.addEventListener("change",toolOptions); toolOptions();
+if ($("copyResult")) $("copyResult").onclick = async () => { await navigator.clipboard.writeText($("resultText").innerText); $("copyResult").textContent="Copied"; setTimeout(()=>$("copyResult").textContent="Copy",1000); };
+if ($("askDocument")) $("askDocument").onclick = async () => { const q=$("documentQuestion").value.trim(), box=$("documentAnswer"); if(!q)return; box.classList.remove("hidden"); box.textContent="Searching your document…"; try { box.textContent=(await api("/api/document-question",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q})})).answer; } catch(e){box.textContent=e.message;} };
+
+let conversation=[], conversationId=null, mode="general", documents=[];
+const preferences=()=>({language:$("language").value,detail:$("detail").value});
+function bubble(role, text, sources=[]){ const box=document.createElement("article"); box.className=`message ${role}`; const body=document.createElement("div"); body.textContent=text; box.append(body); if(sources.length){const s=document.createElement("small");s.className="sources";s.textContent="Sources: "+sources.join(" · ");box.append(s);} if(role==="assistant"&&"speechSynthesis"in window){const speak=document.createElement("button");speak.className="speak";speak.textContent="🔊 Listen";speak.onclick=()=>speechSynthesis.speak(new SpeechSynthesisUtterance(text));box.append(speak);} $("messages").append(box); $("messages").scrollTop=$("messages").scrollHeight; return box; }
+function render(){ $("messages").innerHTML=""; if(!conversation.length) bubble("assistant", mode==="document"?"Add a document, then ask a question. I will cite the relevant pages.":"Hello! I’m your SUMMARIX AI Copilot. What would you like to learn or create?"); else conversation.forEach(m=>bubble(m.role,m.content,m.sources||[])); }
+function setMode(next) {
+    mode = next;
+
+    modes.forEach(button => {
+        button.classList.toggle(
+            "active",
+            button.dataset.mode === mode
+        );
+    });
+
+    $("studyActions").classList.toggle(
+        "hidden",
+        mode !== "study"
+    );
+
+    $("suggestions").classList.toggle(
+        "hidden",
+        conversation.length > 0
+    );
+
+    if (mode === "document") {
+        $("chatInput").placeholder =
+            "Ask about your selected documents…";
+    } else if (mode === "query") {
+        $("chatInput").placeholder =
+            "Search and query your selected documents…";
+    } else if (mode === "study") {
+        $("chatInput").placeholder =
+            "Enter a topic or choose a study action…";
+    } else {
+        $("chatInput").placeholder =
+            "Ask anything…";
+    }
+
+    render();
+}
+modes.forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+function addMessage(role,content,sources=[]){conversation.push({role,content,sources});conversation=conversation.slice(-20);bubble(role,content,sources);$("suggestions").classList.add("hidden");}
+async function loadHistory(){ try {const data=await api("/api/conversations");const list=$("history");list.innerHTML="";data.conversations.forEach(c=>{const b=document.createElement("button");b.textContent=c.title;b.onclick=async()=>{const x=await api(`/api/conversations/${c.id}`);conversation=x.messages;conversationId=c.id;render();};list.append(b);});}catch(e){} }
+async function send(){const text=$("chatInput").value.trim();if(!text)return;addMessage("user",text);$("chatInput").value="";const pending=bubble("assistant","Thinking…");$("sendButton").disabled=true;try{const data=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:conversation,conversation_id:conversationId,mode,preferences:preferences()})});pending.remove();conversationId=data.conversation_id;addMessage("assistant",data.answer,data.sources);loadHistory();}catch(e){pending.textContent=e.message;}finally{$("sendButton").disabled=false;}}
+$("sendButton").onclick=send;$("chatInput").onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}};
+document.querySelectorAll(".suggestions button").forEach(b=>b.onclick=()=>{$("chatInput").value=b.textContent;send();});
+document.querySelectorAll(".study-actions button").forEach(b=>b.onclick=async()=>{const topic=$("chatInput").value.trim()||"the selected document";addMessage("user",`${b.textContent}: ${topic}`);const pending=bubble("assistant","Creating your study material…");try{const d=await api("/api/study",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:b.dataset.action,topic,preferences:preferences()})});pending.remove();addMessage("assistant",d.answer,d.sources);}catch(e){pending.textContent=e.message;}});
+async function loadDocuments(){const data=await api("/api/chat/documents");documents=data.documents;const list=$("docList");list.innerHTML="";documents.forEach(d=>{const row=document.createElement("div");row.innerHTML=`<span>▣ ${d.name}</span><button>×</button>`;row.querySelector("button").onclick=async()=>{await api(`/api/chat/documents/${d.id}`,{method:"DELETE"});loadDocuments();};list.append(row);});}
+$("chatFiles").onchange=async e=>{if(!e.target.files.length)return;const form=new FormData();[...e.target.files].forEach(f=>form.append("documents",f));try{await api("/api/chat/documents",{method:"POST",body:form});await loadDocuments();setMode("document");}catch(err){alert(err.message);}e.target.value="";};
+$("videoButton").onclick=async()=>{const q=$("chatInput").value.trim()||conversation.at(-1)?.content;if(!q)return;bubble("user",`Find YouTube videos about ${q}`);try{const d=await api("/api/chat/videos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:q})});d.videos.forEach(v=>{const a=document.createElement("a");a.className="video-card";a.href=v.url;a.target="_blank";a.rel="noopener";a.textContent=`▶ ${v.title} — ${v.channel}`;$("messages").append(a);});}catch(e){bubble("assistant",e.message);}};
+$("newChat").onclick=()=>{conversation=[];conversationId=null;setMode("general");};$("clearHistory").onclick=async()=>{if(confirm("Delete all saved chat history?")){await api("/api/conversations",{method:"DELETE"});loadHistory();}};$("privacyClear").onclick=()=>{conversation=[];conversationId=null;documents=[];render();loadDocuments();};
+$("settingsButton").onclick=()=>$("settingsPanel").classList.toggle("hidden");
+$("exportButton").onclick=async()=>{const format=prompt("Export format: txt, docx, or pdf", "txt");if(!format||!["txt","docx","pdf"].includes(format))return;const r=await fetch("/api/chat/export",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:conversation,format})});const a=document.createElement("a");a.href=URL.createObjectURL(await r.blob());a.download=`summarix-chat.${format}`;a.click();URL.revokeObjectURL(a.href);};
+const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;$("voiceButton").onclick=()=>{if(!Recognition)return alert("Voice input is supported in Chrome and Edge.");const r=new Recognition();r.lang=$("language").value==="Hindi"?"hi-IN":"en-US";r.onresult=e=>{$("chatInput").value+=e.results[0][0].transcript;};r.start();};
+function open(){ $("copilot").classList.remove("hidden");$("chatInput").focus(); } $("openChat").onclick=open;$("chatFab").onclick=open;$("closeChat").onclick=()=>$("copilot").classList.add("hidden");
+render();loadHistory();loadDocuments();
+</script>
+</body></html>
