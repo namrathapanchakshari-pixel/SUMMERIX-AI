@@ -108,49 +108,54 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
     }
+function handleFileSelection(file) {
 
-    /* =========================================================
-       HANDLE FILE SELECTION
-       ========================================================= */
-
-    function handleFileSelection(file) {
-
-        if (!file) {
-            return;
-        }
-
-        const extension = file.name
-            .split(".")
-            .pop()
-            .toLowerCase();
-
-        if (extension !== "pdf" && extension !== "docx") {
-
-            showUploadStatus(
-                "Only PDF and DOCX files are supported.",
-                "error"
-            );
-
-            return;
-        }
-
-        const maxSize = 20 * 1024 * 1024;
-
-        if (file.size > maxSize) {
-
-            showUploadStatus(
-                "File is too large. Maximum size is 20 MB.",
-                "error"
-            );
-
-            return;
-        }
-
-        selectedFile = file;
-
-        displaySelectedFile(file);
-        hideUploadStatus();
+    if (!file) {
+        return;
     }
+
+    const extension = file.name
+        .split(".")
+        .pop()
+        .toLowerCase();
+
+    if (extension !== "pdf" && extension !== "docx") {
+
+        showUploadStatus(
+            "Only PDF and DOCX files are supported.",
+            "error"
+        );
+
+        return;
+    }
+
+    const maxSize = 20 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+
+        showUploadStatus(
+            "File is too large. Maximum size is 20 MB.",
+            "error"
+        );
+
+        return;
+    }
+
+    selectedFile = file;
+
+    /* Show selected document name immediately */
+    if (documentName) {
+        documentName.textContent = file.name;
+        documentName.style.display = "block";
+    }
+
+    /* Show file card if available */
+    if (selectedFileBox) {
+        displaySelectedFile(file);
+    }
+
+    hideUploadStatus();
+}
 
     /* =========================================================
        DISPLAY SELECTED FILE
