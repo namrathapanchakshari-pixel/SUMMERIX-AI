@@ -1,0 +1,1281 @@
+
+{% set page_title = "Document History" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+
+    <title>{{ page_title }} | SUMMARIX AI</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #0a0d18;
+            --sidebar: #0d1120;
+            --surface: #111728;
+            --surface-hover: #171e32;
+            --line: rgba(158, 169, 210, .13);
+            --text: #f1f3ff;
+            --muted: #929bb8;
+            --purple: #a18aff;
+            --blue: #7ba8ff;
+            --green: #72ddb0;
+            --radius: 18px;
+            --shadow: 0 18px 50px rgba(0, 0, 0, .22);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                radial-gradient(ellipse at 75% 0%, rgba(101, 77, 190, .12), transparent 34%),
+                radial-gradient(ellipse at 0% 100%, rgba(55, 100, 190, .08), transparent 32%),
+                var(--bg);
+            color: var(--text);
+            font-family: "DM Sans", sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        button, input, select {
+            font: inherit;
+        }
+
+        button, a, input, select {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        select:focus-visible {
+            outline: 2px solid var(--purple);
+            outline-offset: 3px;
+        }
+
+        .app {
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+
+        .sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            width: 248px;
+            padding: 28px 17px 20px;
+            background: rgba(12, 16, 30, .96);
+            border-right: 1px solid var(--line);
+            backdrop-filter: blur(20px);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 0 10px;
+            margin-bottom: 43px;
+        }
+
+        .brand-mark {
+            display: grid;
+            place-items: center;
+            width: 39px;
+            height: 39px;
+            border: 1px solid rgba(180, 158, 255, .35);
+            border-radius: 13px;
+            background: linear-gradient(145deg, #9276ff, #6053d7);
+            color: white;
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 17px;
+            font-weight: 700;
+            box-shadow: 0 5px 22px rgba(119, 91, 255, .23);
+        }
+
+        .brand-name {
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -.4px;
+        }
+
+        .brand-name span {
+            color: var(--purple);
+        }
+
+        .brand-subtitle {
+            display: block;
+            color: var(--muted);
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .nav-label {
+            padding: 0 12px;
+            margin: 0 0 12px;
+            color: #69738f;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.6px;
+            text-transform: uppercase;
+        }
+
+        .nav-list {
+            display: grid;
+            gap: 6px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 45px;
+            padding: 11px 13px;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            color: #9da7c3;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background .2s, color .2s, border-color .2s, transform .2s;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, .035);
+            color: white;
+            transform: translateX(2px);
+        }
+
+        .nav-link.active {
+            color: #d9d0ff;
+            border-color: rgba(157, 132, 255, .19);
+            background: linear-gradient(100deg, rgba(139, 111, 255, .17), rgba(139, 111, 255, .045));
+        }
+
+        .nav-icon {
+            display: grid;
+            place-items: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 7px;
+            background: rgba(255, 255, 255, .045);
+            font-size: 15px;
+        }
+
+        .nav-link.active .nav-icon {
+            background: rgba(160, 137, 255, .17);
+        }
+
+        .sidebar-spacer {
+            flex: 1;
+            min-height: 28px;
+        }
+
+        .sidebar-note {
+            padding: 15px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: linear-gradient(145deg, rgba(124, 105, 224, .09), rgba(60, 88, 160, .04));
+        }
+
+        .sidebar-note-title {
+            margin-bottom: 5px;
+            color: #e3ddff;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .sidebar-note p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.6;
+        }
+
+        .sidebar-bottom {
+            margin-top: 17px;
+            padding: 15px 10px 0;
+            border-top: 1px solid var(--line);
+            color: #737d9a;
+            font-size: 11px;
+        }
+
+        /* Main layout */
+
+        .main {
+            min-height: 100vh;
+            margin-left: 248px;
+        }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            min-height: 74px;
+            padding: 15px clamp(22px, 4vw, 52px);
+            border-bottom: 1px solid var(--line);
+            background: rgba(10, 13, 24, .83);
+            backdrop-filter: blur(18px);
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .breadcrumb strong {
+            color: #e8e9fa;
+            font-weight: 600;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border: 1px solid var(--line);
+            border-radius: 30px;
+            background: rgba(255, 255, 255, .025);
+            color: #b5bfd8;
+            font-size: 11px;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 10px rgba(114, 221, 176, .4);
+        }
+
+        .avatar {
+            display: grid;
+            place-items: center;
+            width: 37px;
+            height: 37px;
+            border: 1px solid rgba(174, 151, 255, .35);
+            border-radius: 12px;
+            background: linear-gradient(145deg, #554a91, #292e53);
+            color: white;
+            font-family: "Space Grotesk", sans-serif;
+            font-weight: 700;
+        }
+
+        .content {
+            width: min(1200px, 100%);
+            margin: 0 auto;
+            padding: 38px clamp(22px, 4vw, 52px) 55px;
+        }
+
+        /* Page heading */
+
+        .page-heading {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 22px;
+            margin-bottom: 28px;
+        }
+
+        .eyebrow {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin-bottom: 11px;
+            color: var(--purple);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .eyebrow-line {
+            width: 24px;
+            height: 1px;
+            background: var(--purple);
+        }
+
+        h1, h2, h3, p {
+            margin-top: 0;
+        }
+
+        h1 {
+            margin-bottom: 8px;
+            font-family: "Space Grotesk", sans-serif;
+            font-size: clamp(28px, 3.3vw, 38px);
+            font-weight: 600;
+            letter-spacing: -1.4px;
+            line-height: 1.2;
+        }
+
+        .heading-description {
+            max-width: 520px;
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            min-height: 42px;
+            padding: 10px 16px;
+            border: 1px solid var(--line);
+            border-radius: 11px;
+            background: rgba(255, 255, 255, .025);
+            color: #dfe3f6;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: .2s ease;
+        }
+
+        .button:hover {
+            border-color: rgba(165, 142, 255, .48);
+            background: rgba(150, 128, 255, .08);
+            transform: translateY(-1px);
+        }
+
+        .button-primary {
+            border-color: transparent;
+            background: linear-gradient(115deg, #8067ec, #6555d4);
+            color: white;
+            box-shadow: 0 7px 20px rgba(102, 81, 215, .18);
+        }
+
+        .button-primary:hover {
+            background: linear-gradient(115deg, #947eff, #7667eb);
+            color: white;
+        }
+
+        /* Summary cards */
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 27px;
+        }
+
+        .summary-card {
+            position: relative;
+            overflow: hidden;
+            min-height: 130px;
+            padding: 20px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: linear-gradient(145deg, rgba(22, 29, 49, .92), rgba(15, 20, 35, .96));
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .09);
+            transition: transform .22s, border-color .22s;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(159, 137, 255, .27);
+        }
+
+        .summary-card::after {
+            position: absolute;
+            right: -26px;
+            bottom: -45px;
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: rgba(140, 113, 255, .055);
+            content: "";
+            pointer-events: none;
+        }
+
+        .summary-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .summary-label {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .summary-icon {
+            display: grid;
+            place-items: center;
+            width: 34px;
+            height: 34px;
+            border: 1px solid rgba(160, 138, 255, .15);
+            border-radius: 10px;
+            background: rgba(145, 120, 255, .09);
+            color: #c4b7ff;
+            font-size: 16px;
+        }
+
+        .summary-value {
+            display: block;
+            margin-top: 10px;
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -.8px;
+            line-height: 1.2;
+        }
+
+        .summary-caption {
+            margin-top: 5px;
+            color: #7f8aa8;
+            font-size: 11px;
+        }
+
+        /* History panel */
+
+        .history-panel {
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            background: rgba(16, 21, 37, .88);
+            box-shadow: var(--shadow);
+        }
+
+        .panel-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 23px 25px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .panel-title {
+            margin: 0 0 4px;
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: -.3px;
+        }
+
+        .panel-subtitle {
+            margin: 0;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .count-badge {
+            padding: 5px 10px;
+            border: 1px solid rgba(159, 137, 255, .2);
+            border-radius: 8px;
+            background: rgba(145, 120, 255, .09);
+            color: #c5b8ff;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 17px 25px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .search-icon {
+            position: absolute;
+            top: 50%;
+            left: 13px;
+            color: #7f8aa8;
+            font-size: 16px;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .search-input, .filter-select {
+            width: 100%;
+            min-height: 42px;
+            border: 1px solid var(--line);
+            border-radius: 11px;
+            outline: none;
+            background: #0d1221;
+            color: var(--text);
+            font-size: 12px;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        .search-input {
+            padding: 11px 14px 11px 39px;
+        }
+
+        .filter-select {
+            width: auto;
+            min-width: 145px;
+            padding: 10px 32px 10px 12px;
+            cursor: pointer;
+        }
+
+        .search-input::placeholder {
+            color: #69748f;
+        }
+
+        .search-input:focus, .filter-select:focus {
+            border-color: rgba(161, 138, 255, .65);
+            box-shadow: 0 0 0 3px rgba(161, 138, 255, .08);
+        }
+
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .history-table th {
+            padding: 13px 25px;
+            border-bottom: 1px solid var(--line);
+            background: rgba(255, 255, 255, .012);
+            color: #7e89a7;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .history-table td {
+            padding: 17px 25px;
+            border-bottom: 1px solid rgba(158, 169, 210, .075);
+            color: #b7c0d8;
+            font-size: 12px;
+            vertical-align: middle;
+        }
+
+        .history-table tbody tr {
+            transition: background .2s;
+        }
+
+        .history-table tbody tr:hover {
+            background: rgba(151, 130, 255, .035);
+        }
+
+        .history-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .document-cell {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            min-width: 220px;
+        }
+
+        .file-icon {
+            display: grid;
+            flex-shrink: 0;
+            place-items: center;
+            width: 42px;
+            height: 46px;
+            border: 1px solid rgba(151, 135, 255, .17);
+            border-radius: 10px;
+            background: linear-gradient(145deg, rgba(135, 111, 255, .13), rgba(76, 93, 169, .08));
+            color: #c4b6ff;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .4px;
+        }
+
+        .file-icon.pdf {
+            border-color: rgba(255, 135, 147, .17);
+            background: rgba(255, 113, 130, .07);
+            color: #ffabb5;
+        }
+
+        .file-name {
+            display: block;
+            max-width: 330px;
+            overflow: hidden;
+            color: #e8ebfa;
+            font-size: 12px;
+            font-weight: 600;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-meta {
+            display: block;
+            margin-top: 4px;
+            color: #78839f;
+            font-size: 10px;
+        }
+
+        .type-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 9px;
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            background: rgba(255, 255, 255, .025);
+            color: #aeb8d1;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .date-cell {
+            min-width: 145px;
+            color: #bac3da;
+            white-space: nowrap;
+        }
+
+        .date-cell small {
+            display: block;
+            margin-top: 3px;
+            color: #76819e;
+            font-size: 10px;
+        }
+
+        .row-number {
+            color: #78839f;
+            font-size: 11px;
+        }
+
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            display: grid;
+            place-items: center;
+            width: 66px;
+            height: 66px;
+            margin: 0 auto 19px;
+            border: 1px solid rgba(160, 138, 255, .18);
+            border-radius: 20px;
+            background: rgba(145, 120, 255, .075);
+            color: #c2b4ff;
+            font-size: 27px;
+        }
+
+        .empty-state h2 {
+            margin-bottom: 8px;
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 19px;
+            font-weight: 600;
+        }
+
+        .empty-state p {
+            max-width: 350px;
+            margin: 0 auto 22px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .no-results {
+            display: none;
+            padding: 35px 20px;
+            color: var(--muted);
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .panel-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 16px 25px;
+            border-top: 1px solid var(--line);
+            background: rgba(255, 255, 255, .012);
+            color: #7f8aa8;
+            font-size: 11px;
+        }
+
+        .footer-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .text-link {
+            color: #bdb0ff;
+            transition: color .2s;
+        }
+
+        .text-link:hover {
+            color: white;
+        }
+
+        .bottom-note {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 25px;
+            color: #626d88;
+            font-size: 10px;
+            text-align: center;
+        }
+
+        /* Responsive */
+
+        @media (min-width: 1500px) {
+            .content {
+                padding-top: 48px;
+            }
+        }
+
+        @media (max-width: 1050px) {
+            .sidebar {
+                width: 220px;
+            }
+
+            .main {
+                margin-left: 220px;
+            }
+
+            .summary-grid {
+                gap: 11px;
+            }
+
+            .summary-card {
+                padding: 16px;
+            }
+
+            .history-table th,
+            .history-table td {
+                padding-right: 16px;
+                padding-left: 16px;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+                padding: 14px 17px;
+                border-right: 0;
+                border-bottom: 1px solid var(--line);
+            }
+
+            .brand {
+                margin-bottom: 16px;
+            }
+
+            .nav-label,
+            .sidebar-note,
+            .sidebar-bottom,
+            .sidebar-spacer {
+                display: none;
+            }
+
+            .nav-list {
+                display: flex;
+                gap: 7px;
+                overflow-x: auto;
+                padding-bottom: 2px;
+            }
+
+            .nav-link {
+                flex-shrink: 0;
+                min-height: 38px;
+                padding: 8px 10px;
+                font-size: 11px;
+            }
+
+            .nav-icon {
+                width: 19px;
+                height: 19px;
+                font-size: 12px;
+            }
+
+            .main {
+                margin-left: 0;
+            }
+
+            .topbar {
+                position: static;
+                min-height: 56px;
+                padding: 12px 20px;
+            }
+
+            .content {
+                padding: 27px 20px 38px;
+            }
+
+            .page-heading {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .summary-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .summary-card {
+                min-height: 115px;
+                padding: 13px;
+            }
+
+            .summary-value {
+                font-size: 23px;
+            }
+
+            .summary-caption {
+                font-size: 10px;
+            }
+
+            .panel-heading {
+                padding: 19px;
+            }
+
+            .toolbar {
+                flex-wrap: wrap;
+                padding: 15px 19px;
+            }
+
+            .search-box {
+                flex-basis: 100%;
+            }
+
+            .filter-select {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .history-table th {
+                padding: 12px 15px;
+            }
+
+            .history-table td {
+                padding: 14px 15px;
+            }
+
+            .panel-footer {
+                align-items: flex-start;
+                flex-direction: column;
+                padding: 15px 19px;
+            }
+        }
+
+        @media (max-width: 460px) {
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-card {
+                min-height: 100px;
+            }
+
+            .summary-top {
+                justify-content: flex-start;
+                gap: 12px;
+            }
+
+            .summary-value {
+                margin-top: 7px;
+            }
+
+            .status {
+                display: none;
+            }
+
+            .content {
+                padding-right: 14px;
+                padding-left: 14px;
+            }
+
+            .topbar {
+                padding-right: 16px;
+                padding-left: 16px;
+            }
+
+            .history-table {
+                min-width: 590px;
+            }
+
+            .panel-heading {
+                align-items: flex-start;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                scroll-behavior: auto !important;
+                transition-duration: .01ms !important;
+                animation-duration: .01ms !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="app">
+
+    <aside class="sidebar">
+        <a class="brand" href="{{ url_for('workspace') }}">
+            <span class="brand-mark">S</span>
+            <span>
+                <span class="brand-name">SUMMARIX <span>AI</span></span>
+                <span class="brand-subtitle">Intelligent workspace</span>
+            </span>
+        </a>
+
+        <div class="nav-label">Workspace</div>
+
+        <nav class="nav-list" aria-label="Main navigation">
+            <a class="nav-link" href="{{ url_for('workspace') }}">
+                <span class="nav-icon">⌂</span> Overview
+            </a>
+            <a class="nav-link active" href="{{ url_for('user_history') }}" aria-current="page">
+                <span class="nav-icon">▤</span> Document history
+            </a>
+            <a class="nav-link" href="{{ url_for('user_profile') }}">
+                <span class="nav-icon">♙</span> My profile
+            </a>
+            <a class="nav-link" href="{{ url_for('user_settings') }}">
+                <span class="nav-icon">⚙</span> Settings
+            </a>
+            <a class="nav-link" href="{{ url_for('user_logout') }}">
+                <span class="nav-icon">↗</span> Sign out
+            </a>
+        </nav>
+
+        <div class="sidebar-spacer"></div>
+
+        <div class="sidebar-note">
+            <div class="sidebar-note-title">Your documents, organized.</div>
+            <p>Keep track of files you've uploaded to SUMMARIX AI, all in one place.</p>
+        </div>
+
+        <div class="sidebar-bottom">SUMMARIX AI · Version 1.0</div>
+    </aside>
+
+    <main class="main">
+
+        <header class="topbar">
+            <div class="breadcrumb">
+                <span>Workspace</span>
+                <span>/</span>
+                <strong>Document history</strong>
+            </div>
+
+            <div class="topbar-right">
+                <div class="status">
+                    <span class="status-dot"></span>
+                    Workspace active
+                </div>
+                <a class="avatar" href="{{ url_for('user_profile') }}" aria-label="Open profile">S</a>
+            </div>
+        </header>
+
+        <div class="content">
+
+            <section class="page-heading">
+                <div>
+                    <div class="eyebrow">
+                        <span class="eyebrow-line"></span>
+                        Your activity
+                    </div>
+                    <h1>Document history<span style="color:var(--purple)">.</span></h1>
+                    <p class="heading-description">
+                        A clear view of the documents you've uploaded to your workspace.
+                        Search your history and find files quickly.
+                    </p>
+                </div>
+
+                <a class="button button-primary" href="{{ url_for('workspace') }}">
+                    <span>＋</span> Upload a document
+                </a>
+            </section>
+
+            {% set document_count = documents|length if documents else 0 %}
+
+            <section class="summary-grid" aria-label="Document statistics">
+                <article class="summary-card">
+                    <div class="summary-top">
+                        <span class="summary-label">Total documents</span>
+                        <span class="summary-icon">▤</span>
+                    </div>
+                    <strong class="summary-value">{{ document_count }}</strong>
+                    <div class="summary-caption">Files in your history</div>
+                </article>
+
+                <article class="summary-card">
+                    <div class="summary-top">
+                        <span class="summary-label">PDF documents</span>
+                        <span class="summary-icon">▧</span>
+                    </div>
+                    <strong class="summary-value" id="pdfCount">0</strong>
+                    <div class="summary-caption">PDF files uploaded</div>
+                </article>
+
+                <article class="summary-card">
+                    <div class="summary-top">
+                        <span class="summary-label">Word documents</span>
+                        <span class="summary-icon">▤</span>
+                    </div>
+                    <strong class="summary-value" id="docxCount">0</strong>
+                    <div class="summary-caption">DOCX files uploaded</div>
+                </article>
+            </section>
+
+            <section class="history-panel">
+                <div class="panel-heading">
+                    <div>
+                        <h2 class="panel-title">Your uploaded files</h2>
+                        <p class="panel-subtitle">Browse and filter your document records.</p>
+                    </div>
+                    <span class="count-badge" id="visibleCount">
+                        {{ document_count }} {{ 'document' if document_count == 1 else 'documents' }}
+                    </span>
+                </div>
+
+                {% if documents %}
+                <div class="toolbar">
+                    <label class="search-box">
+                        <span class="search-icon" aria-hidden="true">⌕</span>
+                        <input
+                            class="search-input"
+                            id="documentSearch"
+                            type="search"
+                            placeholder="Search document names..."
+                            aria-label="Search document names"
+                            autocomplete="off"
+                        >
+                    </label>
+
+                    <select class="filter-select" id="typeFilter" aria-label="Filter by file type">
+                        <option value="all">All file types</option>
+                        <option value="pdf">PDF files</option>
+                        <option value="docx">Word files</option>
+                        <option value="other">Other files</option>
+                    </select>
+
+                    <select class="filter-select" id="sortFilter" aria-label="Sort documents">
+                        <option value="newest">Newest first</option>
+                        <option value="oldest">Oldest first</option>
+                        <option value="name-asc">Name: A–Z</option>
+                        <option value="name-desc">Name: Z–A</option>
+                    </select>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th style="width:45px">#</th>
+                                <th>Document</th>
+                                <th>File type</th>
+                                <th>Upload date</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="documentRows">
+                            {% for document in documents %}
+                            {% set filename = document.filename or 'Untitled document' %}
+                            {% set extension = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'file' %}
+                            {% set filetype = 'pdf' if extension == 'pdf' else ('docx' if extension == 'docx' else 'other') %}
+                            <tr
+                                class="document-row"
+                                data-name="{{ filename|lower }}"
+                                data-type="{{ filetype }}"
+                                data-date="{{ document.uploaded_at or '' }}"
+                            >
+                                <td class="row-number">{{ loop.index }}</td>
+                                <td>
+                                    <div class="document-cell">
+                                        <span class="file-icon {{ 'pdf' if filetype == 'pdf' else '' }}">
+                                            {{ extension[:5]|upper }}
+                                        </span>
+                                        <div style="min-width:0">
+                                            <span class="file-name" title="{{ filename }}">{{ filename }}</span>
+                                            <span class="file-meta">Uploaded document</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="type-pill">
+                                        {{ 'PDF document' if filetype == 'pdf' else ('Word document' if filetype == 'docx' else extension|upper ~ ' file') }}
+                                    </span>
+                                </td>
+                                <td class="date-cell">
+                                    {{ document.uploaded_at[:19].replace('T', ' ') if document.uploaded_at else '—' }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="no-results" id="noResults">
+                    <div style="font-size:25px;margin-bottom:8px">⌕</div>
+                    <strong style="display:block;color:#dfe3f6;margin-bottom:5px">No matching documents</strong>
+                    Try another search term or change the file type filter.
+                </div>
+
+                <div class="panel-footer">
+                    <span id="resultSummary">Showing {{ document_count }} document{{ '' if document_count == 1 else 's' }}</span>
+                    <div class="footer-actions">
+                        <button class="button" type="button" id="clearFilters">Clear filters</button>
+                        <a class="button" href="{{ url_for('workspace') }}">＋ Upload more</a>
+                    </div>
+                </div>
+
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon" aria-hidden="true">▤</div>
+                    <h2>Your history starts here</h2>
+                    <p>
+                        You haven't uploaded any documents yet. Upload a PDF or Word
+                        document to start summarizing, extracting key points, and asking questions.
+                    </p>
+                    <a class="button button-primary" href="{{ url_for('workspace') }}">
+                        ＋ Upload your first document
+                    </a>
+                </div>
+                {% endif %}
+            </section>
+
+            <div class="bottom-note">
+                <span>✦</span>
+                Your workspace history, organized with SUMMARIX AI.
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+(() => {
+    const rowsContainer = document.getElementById("documentRows");
+    if (!rowsContainer) return;
+
+    const searchInput = document.getElementById("documentSearch");
+    const typeFilter = document.getElementById("typeFilter");
+    const sortFilter = document.getElementById("sortFilter");
+    const clearButton = document.getElementById("clearFilters");
+    const noResults = document.getElementById("noResults");
+    const visibleCount = document.getElementById("visibleCount");
+    const resultSummary = document.getElementById("resultSummary");
+    const pdfCount = document.getElementById("pdfCount");
+    const docxCount = document.getElementById("docxCount");
+
+    const rows = Array.from(rowsContainer.querySelectorAll(".document-row"));
+
+    pdfCount.textContent = rows.filter(row => row.dataset.type === "pdf").length;
+    docxCount.textContent = rows.filter(row => row.dataset.type === "docx").length;
+
+    function updateHistory() {
+        const query = searchInput.value.trim().toLowerCase();
+        const selectedType = typeFilter.value;
+        const sort = sortFilter.value;
+
+        const filtered = rows.filter(row => {
+            const matchesName = row.dataset.name.includes(query);
+            const matchesType =
+                selectedType === "all" ||
+                row.dataset.type === selectedType ||
+                (selectedType === "other" && row.dataset.type === "other");
+
+            return matchesName && matchesType;
+        });
+
+        filtered.sort((a, b) => {
+            if (sort === "name-asc") {
+                return a.dataset.name.localeCompare(b.dataset.name);
+            }
+
+            if (sort === "name-desc") {
+                return b.dataset.name.localeCompare(a.dataset.name);
+            }
+
+            const dateA = Date.parse(a.dataset.date) || 0;
+            const dateB = Date.parse(b.dataset.date) || 0;
+
+            return sort === "oldest" ? dateA - dateB : dateB - dateA;
+        });
+
+        filtered.forEach((row, index) => {
+            row.style.display = "";
+            row.querySelector(".row-number").textContent = index + 1;
+            rowsContainer.appendChild(row);
+        });
+
+        rows.forEach(row => {
+            if (!filtered.includes(row)) {
+                row.style.display = "none";
+            }
+        });
+
+        const count = filtered.length;
+        const noun = count === 1 ? "document" : "documents";
+
+        visibleCount.textContent = `${count} ${noun}`;
+        resultSummary.textContent = `Showing ${count} of ${rows.length} ${rows.length === 1 ? "document" : "documents"}`;
+        noResults.style.display = count === 0 ? "block" : "none";
+        rowsContainer.parentElement.style.display = count === 0 ? "none" : "table";
+    }
+
+    searchInput.addEventListener("input", updateHistory);
+    typeFilter.addEventListener("change", updateHistory);
+    sortFilter.addEventListener("change", updateHistory);
+
+    clearButton.addEventListener("click", () => {
+        searchInput.value = "";
+        typeFilter.value = "all";
+        sortFilter.value = "newest";
+        updateHistory();
+        searchInput.focus();
+    });
+
+    updateHistory();
+})();
+</script>
+</body>
+</html>

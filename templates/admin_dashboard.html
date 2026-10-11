@@ -1,0 +1,185 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUMMERIX AI | Admin Dashboard</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: #f4f4ff;
+            background: #101024;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            padding: 20px 6%;
+            background: #1b1b38;
+            border-bottom: 1px solid #36365a;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        header a {
+            color: #c5b8ff;
+            text-decoration: none;
+        }
+
+        main {
+            width: min(1100px, 90%);
+            margin: 35px auto;
+        }
+
+        .welcome {
+            margin-bottom: 25px;
+        }
+
+        .welcome p {
+            color: #aaaaca;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 18px;
+        }
+
+        .card {
+            padding: 25px;
+            border: 1px solid #36365a;
+            border-radius: 14px;
+            background: #1b1b38;
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: #bcb2ff;
+            font-size: 15px;
+        }
+
+        .number {
+            margin-bottom: 0;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .activity {
+            margin-top: 30px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 15px;
+            border-collapse: collapse;
+            background: #1b1b38;
+        }
+
+        th, td {
+            padding: 13px;
+            text-align: left;
+            border-bottom: 1px solid #36365a;
+            overflow-wrap: anywhere;
+        }
+
+        th {
+            color: #c5b8ff;
+        }
+
+        .empty {
+            color: #aaaaca;
+        }
+
+        @media (max-width: 600px) {
+            header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            th, td {
+                padding: 9px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>SUMMERIX AI — Admin</h1>
+        <a href="{{ url_for('admin_logout') }}">Logout</a>
+    </header>
+
+    <main>
+        <section class="welcome">
+            <h2>Welcome, {{ admin_username }}!</h2>
+            <p>Monitor your SUMMERIX AI database and activity.</p>
+        </section>
+
+        <section class="stats">
+            <article class="card">
+                <h3>Admin Accounts</h3>
+                <p class="number">{{ admin_count }}</p>
+            </article>
+
+            <article class="card">
+                <h3>Registered Users</h3>
+                <p class="number">{{ user_count }}</p>
+            </article>
+
+            <article class="card">
+                <h3>Uploaded Documents</h3>
+                <p class="number">{{ document_count }}</p>
+            </article>
+
+            <article class="card">
+                <h3>Activity Records</h3>
+                <p class="number">{{ activity_count }}</p>
+            </article>
+        </section>
+
+        <section class="activity">
+            <h2>Recent Activity</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>Details</th>
+                        <th>Date and Time</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in recent_activities %}
+                    <tr>
+                        <td>{{ item["action"] }}</td>
+                        <td>{{ item["details"] or "—" }}</td>
+                        <td>{{ item["created_at"] }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="empty">
+                            No activity recorded yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,1095 @@
+
+{% set page_title = "Settings" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a0d18">
+<title>{{ page_title }} | SUMMARIX AI</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    color-scheme: dark;
+    --bg: #0a0d18;
+    --surface: #111728;
+    --surface2: #0d1221;
+    --line: rgba(158,169,210,.14);
+    --text: #f1f3ff;
+    --muted: #929bb8;
+    --purple: #a18aff;
+    --green: #72ddb0;
+    --red: #ff9eac;
+    --amber: #e9bf7a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+        radial-gradient(ellipse at 75% 0%, rgba(101,77,190,.13), transparent 35%),
+        radial-gradient(ellipse at 0% 100%, rgba(55,100,190,.07), transparent 32%),
+        var(--bg);
+    color: var(--text);
+    font: 14px/1.6 "DM Sans", sans-serif;
+}
+
+a { color: inherit; text-decoration: none; }
+button, input, select { font: inherit; }
+button, a, input { -webkit-tap-highlight-color: transparent; }
+
+a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--purple);
+    outline-offset: 3px;
+}
+
+/* Sidebar */
+
+.sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    width: 245px;
+    padding: 27px 17px 20px;
+    background: rgba(12,16,30,.97);
+    border-right: 1px solid var(--line);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 0 9px;
+    margin-bottom: 42px;
+}
+
+.brand-mark {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
+    background: linear-gradient(145deg,#9276ff,#6053d7);
+    box-shadow: 0 5px 22px #775bff30;
+    font: 700 18px "Space Grotesk",sans-serif;
+}
+
+.brand-name {
+    font: 700 16px "Space Grotesk",sans-serif;
+    letter-spacing: -.4px;
+}
+
+.brand-name span { color: var(--purple); }
+
+.brand-subtitle {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+}
+
+.nav-label {
+    padding: 0 12px;
+    margin-bottom: 12px;
+    color: #69738f;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+}
+
+.nav-list { display: grid; gap: 6px; }
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 11px 13px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    color: #9da7c3;
+    font-size: 13px;
+    transition: .2s;
+}
+
+.nav-link:hover {
+    background: #ffffff08;
+    color: white;
+}
+
+.nav-link.active {
+    border-color: #9d84ff30;
+    background: linear-gradient(100deg,#8b6fff25,#8b6fff08);
+    color: #ded6ff;
+}
+
+.nav-icon {
+    display: grid;
+    place-items: center;
+    width: 25px;
+    height: 25px;
+    border-radius: 8px;
+    background: #ffffff08;
+    font-size: 15px;
+}
+
+.side-spacer { flex: 1; min-height: 25px; }
+
+.sidebar-note {
+    padding: 15px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: linear-gradient(145deg,#7c69e218,#3c58a00a);
+}
+
+.sidebar-note strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #e3ddff;
+    font-size: 12px;
+}
+
+.sidebar-note p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.side-footer {
+    margin-top: 17px;
+    padding: 14px 9px 0;
+    border-top: 1px solid var(--line);
+    color: #737d9a;
+    font-size: 11px;
+}
+
+/* Main layout */
+
+.main { min-height: 100vh; margin-left: 245px; }
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 70px;
+    padding: 14px clamp(22px,4vw,50px);
+    border-bottom: 1px solid var(--line);
+    background: #0a0d18df;
+    backdrop-filter: blur(18px);
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.breadcrumb strong { color: #e8e9fa; }
+
+.avatar {
+    display: grid;
+    place-items: center;
+    width: 37px;
+    height: 37px;
+    border: 1px solid #ae97ff45;
+    border-radius: 12px;
+    background: linear-gradient(145deg,#554a91,#292e53);
+    font-weight: 700;
+}
+
+.content {
+    width: min(1050px,100%);
+    margin: 0 auto;
+    padding: 37px clamp(22px,4vw,50px) 55px;
+}
+
+.eyebrow {
+    margin-bottom: 9px;
+    color: var(--purple);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+h1,h2,h3 { font-family: "Space Grotesk",sans-serif; }
+
+h1 {
+    margin: 0 0 9px;
+    font-size: clamp(28px,3.5vw,37px);
+    font-weight: 600;
+    letter-spacing: -1.2px;
+}
+
+.subtitle {
+    max-width: 600px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+/* Overview cards */
+
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 14px;
+    margin-top: 29px;
+}
+
+.overview-card {
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: linear-gradient(145deg,#171d32,#111728);
+    transition: .2s;
+}
+
+.overview-card:hover {
+    border-color: #a18aff48;
+    transform: translateY(-2px);
+}
+
+.overview-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.overview-label {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.overview-icon {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #a18aff20;
+    border-radius: 9px;
+    background: #a18aff10;
+    color: #c6b9ff;
+    font-size: 15px;
+}
+
+.overview-value {
+    display: block;
+    margin-top: 12px;
+    font: 600 17px "Space Grotesk",sans-serif;
+}
+
+.overview-caption {
+    margin-top: 4px;
+    color: #7f8aa8;
+    font-size: 10px;
+}
+
+/* Panels */
+
+.section-heading { margin: 32px 0 15px; }
+
+.section-heading h2 {
+    margin: 0 0 5px;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.section-heading p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.panel {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: rgba(17,23,40,.93);
+    box-shadow: 0 15px 40px #00000012;
+}
+
+.panel-header {
+    padding: 21px 24px;
+    border-bottom: 1px solid var(--line);
+}
+
+.panel-header h3 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.panel-header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.panel-body { padding: 23px 24px; }
+
+.flash {
+    margin: 0 0 17px;
+    padding: 12px 14px;
+    border: 1px solid;
+    border-radius: 11px;
+    font-size: 12px;
+}
+
+.flash.success {
+    border-color: #327b5d;
+    background: #123326;
+    color: var(--green);
+}
+
+.flash.error {
+    border-color: #874450;
+    background: #381b25;
+    color: var(--red);
+}
+
+/* Password form */
+
+.security-intro {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    margin-bottom: 23px;
+    padding: 15px;
+    border: 1px solid #a18aff20;
+    border-radius: 12px;
+    background: #a18aff09;
+}
+
+.security-icon {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #a18aff18;
+    color: #c7baff;
+    font-size: 17px;
+}
+
+.security-intro strong {
+    display: block;
+    margin-bottom: 3px;
+    color: #e8e2ff;
+    font-size: 12px;
+}
+
+.security-intro p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.field-grid {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 18px;
+}
+
+.field { min-width: 0; margin-bottom: 19px; }
+
+.field label {
+    display: block;
+    margin-bottom: 8px;
+    color: #d8dcef;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.field input {
+    width: 100%;
+    min-height: 45px;
+    padding: 12px 13px;
+    border: 1px solid #343c56;
+    border-radius: 10px;
+    outline: none;
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 13px;
+    transition: border-color .2s,box-shadow .2s;
+}
+
+.field input:focus {
+    border-color: #a18affb3;
+    box-shadow: 0 0 0 3px #a18aff12;
+}
+
+.field input::placeholder { color: #68728d; }
+
+.field-hint {
+    display: block;
+    margin-top: 6px;
+    color: #7984a0;
+    font-size: 10px;
+}
+
+.password-wrap { position: relative; }
+
+.password-wrap input { padding-right: 70px; }
+
+.toggle-password {
+    position: absolute;
+    top: 50%;
+    right: 9px;
+    padding: 5px 7px;
+    transform: translateY(-50%);
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #b8aaff;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.strength-track {
+    height: 4px;
+    margin-top: 10px;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #293149;
+}
+
+.strength-fill {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    transition: width .2s,background .2s;
+}
+
+.strength-label {
+    display: block;
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.requirements {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 8px 13px;
+    margin: 1px 0 22px;
+    padding: 15px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #0d122180;
+}
+
+.requirement {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #8f9ab7;
+    font-size: 11px;
+}
+
+.requirement .check {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 17px;
+    height: 17px;
+    border: 1px solid #343c56;
+    border-radius: 50%;
+    color: transparent;
+    font-size: 10px;
+}
+
+.requirement.met { color: var(--green); }
+.requirement.met .check {
+    border-color: #72ddb050;
+    background: #72ddb018;
+    color: var(--green);
+}
+
+.match-message {
+    display: block;
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 5px;
+    padding-top: 19px;
+    border-top: 1px solid var(--line);
+}
+
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 41px;
+    padding: 10px 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #ffffff05;
+    color: #dfe3f6;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.button:hover {
+    border-color: #a18aff70;
+    background: #a18aff12;
+}
+
+.button-primary {
+    border-color: transparent;
+    background: linear-gradient(115deg,#8067ec,#6555d4);
+    color: white;
+}
+
+.button-primary:hover {
+    background: linear-gradient(115deg,#947eff,#7667eb);
+}
+
+.button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.security-footer {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 18px;
+    color: #8792af;
+    font-size: 11px;
+}
+
+.security-footer span { color: var(--green); }
+
+/* Additional security information */
+
+.info-list { padding: 4px 24px; }
+
+.info-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    padding: 17px 0;
+    border-bottom: 1px solid #9ea9d20d;
+}
+
+.info-row:last-child { border-bottom: 0; }
+
+.info-symbol {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #ffffff04;
+    color: #c4b6ff;
+    font-size: 14px;
+}
+
+.info-copy { flex: 1; }
+
+.info-copy strong {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 12px;
+}
+
+.info-copy p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.info-status {
+    flex-shrink: 0;
+    padding: 5px 8px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: #9eabc7;
+    font-size: 10px;
+}
+
+.quick-links {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.quick-link {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    background: #ffffff03;
+    transition: .2s;
+}
+
+.quick-link:hover {
+    border-color: #a18aff50;
+    background: #a18aff08;
+    transform: translateY(-2px);
+}
+
+.quick-icon {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 33px;
+    height: 33px;
+    border-radius: 9px;
+    background: #a18aff12;
+    color: #c5b7ff;
+}
+
+.quick-link strong { display: block; font-size: 11px; }
+.quick-link small {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.page-footer {
+    margin-top: 28px;
+    color: #68738f;
+    font-size: 10px;
+    text-align: center;
+}
+
+/* Responsive */
+
+@media(max-width:1000px) {
+    .sidebar { width: 215px; }
+    .main { margin-left: 215px; }
+    .quick-links { grid-template-columns: 1fr; }
+}
+
+@media(max-width:700px) {
+    .sidebar {
+        position: relative;
+        width: 100%;
+        padding: 14px 16px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .brand { margin-bottom: 16px; }
+    .nav-label,.sidebar-note,.side-footer,.side-spacer { display: none; }
+
+    .nav-list {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+    }
+
+    .nav-link {
+        flex-shrink: 0;
+        min-height: 38px;
+        padding: 8px 10px;
+        font-size: 11px;
+    }
+
+    .main { margin-left: 0; }
+    .topbar { position: static; min-height: 55px; padding: 12px 18px; }
+    .content { padding: 27px 16px 40px; }
+    .overview-grid { grid-template-columns: 1fr; gap: 10px; }
+    .overview-card { padding: 15px; }
+    .field-grid { grid-template-columns: 1fr; gap: 0; }
+    .panel-header,.panel-body { padding: 18px; }
+    .info-list { padding: 4px 18px; }
+    .requirements { grid-template-columns: 1fr; }
+}
+
+@media(max-width:420px) {
+    .form-actions { align-items: stretch; flex-direction: column; }
+    .form-actions .button { width: 100%; }
+    .info-status { max-width: 85px; text-align: center; }
+}
+
+@media(prefers-reduced-motion:reduce) {
+    *,*::before,*::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+    }
+}
+</style>
+</head>
+
+<body>
+<aside class="sidebar">
+    <a class="brand" href="{{ url_for('workspace') }}">
+        <span class="brand-mark">S</span>
+        <span>
+            <span class="brand-name">SUMMARIX <span>AI</span></span>
+            <span class="brand-subtitle">Intelligent workspace</span>
+        </span>
+    </a>
+
+    <div class="nav-label">Workspace</div>
+    <nav class="nav-list" aria-label="Main navigation">
+        <a class="nav-link" href="{{ url_for('workspace') }}"><span class="nav-icon">⌂</span> Overview</a>
+        <a class="nav-link" href="{{ url_for('user_history') }}"><span class="nav-icon">▤</span> Document history</a>
+        <a class="nav-link" href="{{ url_for('user_profile') }}"><span class="nav-icon">♙</span> My profile</a>
+        <a class="nav-link active" href="{{ url_for('user_settings') }}" aria-current="page"><span class="nav-icon">⚙</span> Settings</a>
+        <a class="nav-link" href="{{ url_for('user_logout') }}"><span class="nav-icon">↗</span> Sign out</a>
+    </nav>
+
+    <div class="side-spacer"></div>
+
+    <div class="sidebar-note">
+        <strong>Security matters.</strong>
+        <p>Use a unique password and keep your account credentials private.</p>
+    </div>
+
+    <div class="side-footer">SUMMARIX AI · Version 1.0</div>
+</aside>
+
+<main class="main">
+    <header class="topbar">
+        <div class="breadcrumb">
+            <span>Workspace</span><span>/</span><strong>Settings</strong>
+        </div>
+        <a class="avatar" href="{{ url_for('user_profile') }}" aria-label="Open profile">S</a>
+    </header>
+
+    <div class="content">
+        <div class="eyebrow">Preferences &amp; protection</div>
+        <h1>Account settings<span style="color:var(--purple)">.</span></h1>
+        <p class="subtitle">
+            Manage your account security and password preferences in one place.
+            Your changes are handled by your existing SUMMARIX AI account system.
+        </p>
+
+        <section class="overview-grid" aria-label="Security overview">
+            <article class="overview-card">
+                <div class="overview-top">
+                    <span class="overview-label">Account security</span>
+                    <span class="overview-icon">♙</span>
+                </div>
+                <strong class="overview-value">Password protection</strong>
+                <div class="overview-caption">Keep your credentials private</div>
+            </article>
+
+            <article class="overview-card">
+                <div class="overview-top">
+                    <span class="overview-label">Password standard</span>
+                    <span class="overview-icon">⌑</span>
+                </div>
+                <strong class="overview-value">8+ characters</strong>
+                <div class="overview-caption">Use a longer, unique password</div>
+            </article>
+
+            <article class="overview-card">
+                <div class="overview-top">
+                    <span class="overview-label">Sign-in options</span>
+                    <span class="overview-icon">↗</span>
+                </div>
+                <strong class="overview-value">Account dependent</strong>
+                <div class="overview-caption">Local password or Google Sign-In</div>
+            </article>
+        </section>
+
+        <div class="section-heading">
+            <h2>Password and security</h2>
+            <p>Update your password using your current account credentials.</p>
+        </div>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h3>Change your password</h3>
+                <p>Verify your current password before choosing a replacement.</p>
+            </div>
+
+            <div class="panel-body">
+                {% if message %}
+                <div class="flash success" role="status">{{ message }}</div>
+                {% endif %}
+
+                {% if error %}
+                <div class="flash error" role="alert">{{ error }}</div>
+                {% endif %}
+
+                <div class="security-intro">
+                    <div class="security-icon">♙</div>
+                    <div>
+                        <strong>Protect your SUMMARIX AI account</strong>
+                        <p>
+                            Choose a password that is difficult to guess and different
+                            from passwords you use on other websites.
+                        </p>
+                    </div>
+                </div>
+
+                <form method="post" action="{{ url_for('user_settings') }}" id="passwordForm">
+                    <div class="field">
+                        <label for="current_password">Current password</label>
+                        <div class="password-wrap">
+                            <input
+                                id="current_password"
+                                name="current_password"
+                                type="password"
+                                autocomplete="current-password"
+                                placeholder="Enter your current password"
+                                required
+                            >
+                            <button class="toggle-password" type="button" data-target="current_password">Show</button>
+                        </div>
+                    </div>
+
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="new_password">New password</label>
+                            <div class="password-wrap">
+                                <input
+                                    id="new_password"
+                                    name="new_password"
+                                    type="password"
+                                    minlength="8"
+                                    autocomplete="new-password"
+                                    placeholder="Create a new password"
+                                    required
+                                >
+                                <button class="toggle-password" type="button" data-target="new_password">Show</button>
+                            </div>
+
+                            <div class="strength-track" aria-hidden="true">
+                                <div class="strength-fill" id="strengthFill"></div>
+                            </div>
+                            <span class="strength-label" id="strengthLabel" aria-live="polite">Enter a password to check its strength.</span>
+                        </div>
+
+                        <div class="field">
+                            <label for="confirm_password">Confirm new password</label>
+                            <div class="password-wrap">
+                                <input
+                                    id="confirm_password"
+                                    name="confirm_password"
+                                    type="password"
+                                    minlength="8"
+                                    autocomplete="new-password"
+                                    placeholder="Enter it again"
+                                    required
+                                >
+                                <button class="toggle-password" type="button" data-target="confirm_password">Show</button>
+                            </div>
+                            <span class="match-message" id="matchMessage" aria-live="polite">Your passwords will be checked as you type.</span>
+                        </div>
+                    </div>
+
+                    <div class="field-hint" style="margin-bottom:12px">Password checklist</div>
+                    <div class="requirements">
+                        <div class="requirement" id="reqLength"><span class="check">✓</span> At least 8 characters</div>
+                        <div class="requirement" id="reqUpper"><span class="check">✓</span> An uppercase letter</div>
+                        <div class="requirement" id="reqLower"><span class="check">✓</span> A lowercase letter</div>
+                        <div class="requirement" id="reqNumber"><span class="check">✓</span> A number</div>
+                        <div class="requirement" id="reqSymbol"><span class="check">✓</span> A special character</div>
+                    </div>
+
+                    <div class="form-actions">
+                        <span class="field-hint">Your current password is required to continue.</span>
+                        <button class="button button-primary" type="submit">Update password&nbsp; →</button>
+                    </div>
+                </form>
+
+                <div class="security-footer">
+                    <span>✓</span>
+                    <div>Use the password strength and matching checks as guidance. The server remains responsible for verifying your current password and securely storing the new password.</div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-heading">
+            <h2>Security guidance</h2>
+            <p>Helpful reminders for maintaining your account.</p>
+        </div>
+
+        <section class="panel">
+            <div class="info-list">
+                <div class="info-row">
+                    <div class="info-symbol">⌑</div>
+                    <div class="info-copy">
+                        <strong>Use a unique password</strong>
+                        <p>Avoid reusing your SUMMARIX AI password on other services.</p>
+                    </div>
+                    <span class="info-status">Recommended</span>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-symbol">♙</div>
+                    <div class="info-copy">
+                        <strong>Google Sign-In accounts</strong>
+                        <p>If your account has no local password, continue signing in with Google. A local password cannot be created here unless your backend explicitly supports it.</p>
+                    </div>
+                    <span class="info-status">Sign-in</span>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-symbol">⚙</div>
+                    <div class="info-copy">
+                        <strong>Keep account details current</strong>
+                        <p>Review your profile information when your email address or username changes.</p>
+                    </div>
+                    <a class="info-status" href="{{ url_for('user_profile') }}">View profile ↗</a>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-heading">
+            <h2>Quick access</h2>
+            <p>Other parts of your workspace.</p>
+        </div>
+
+        <div class="quick-links">
+            <a class="quick-link" href="{{ url_for('workspace') }}">
+                <span class="quick-icon">⌂</span>
+                <span><strong>Workspace</strong><small>Open document tools</small></span>
+            </a>
+            <a class="quick-link" href="{{ url_for('user_profile') }}">
+                <span class="quick-icon">♙</span>
+                <span><strong>My profile</strong><small>Manage personal details</small></span>
+            </a>
+            <a class="quick-link" href="{{ url_for('user_history') }}">
+                <span class="quick-icon">▤</span>
+                <span><strong>Document history</strong><small>Review uploaded files</small></span>
+            </a>
+        </div>
+
+        <div class="page-footer">SUMMARIX AI · Account settings</div>
+    </div>
+</main>
+
+<script>
+(() => {
+    const form = document.getElementById("passwordForm");
+    const current = document.getElementById("current_password");
+    const newPassword = document.getElementById("new_password");
+    const confirmPassword = document.getElementById("confirm_password");
+    const strengthFill = document.getElementById("strengthFill");
+    const strengthLabel = document.getElementById("strengthLabel");
+    const matchMessage = document.getElementById("matchMessage");
+
+    document.querySelectorAll(".toggle-password").forEach(button => {
+        button.addEventListener("click", () => {
+            const input = document.getElementById(button.dataset.target);
+            const showing = input.type === "password";
+            input.type = showing ? "text" : "password";
+            button.textContent = showing ? "Hide" : "Show";
+            button.setAttribute("aria-pressed", String(showing));
+        });
+    });
+
+    const checks = [
+        ["reqLength", value => value.length >= 8],
+        ["reqUpper", value => /[A-Z]/.test(value)],
+        ["reqLower", value => /[a-z]/.test(value)],
+        ["reqNumber", value => /\d/.test(value)],
+        ["reqSymbol", value => /[^A-Za-z0-9]/.test(value)]
+    ];
+
+    function updateStrength() {
+        const value = newPassword.value;
+        let passed = 0;
+
+        checks.forEach(([id, test]) => {
+            const element = document.getElementById(id);
+            const valid = test(value);
+            element.classList.toggle("met", valid);
+            if (valid) passed++;
+        });
+
+        const levels = [
+            ["", "0%", "#293149"],
+            ["Very weak", "20%", "#e18c9c"],
+            ["Weak", "35%", "#e18c9c"],
+            ["Fair", "55%", "#e6b36b"],
+            ["Good", "75%", "#d3ce78"],
+            ["Strong", "100%", "#55d8a4"]
+        ];
+
+        let score = 0;
+        if (value.length >= 8) score++;
+        if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score++;
+        if (/\d/.test(value)) score++;
+        if (/[^A-Za-z0-9]/.test(value)) score++;
+        if (value.length >= 12) score++;
+
+        const level = levels[value ? Math.max(1, score) : 0];
+        strengthFill.style.width = level[1];
+        strengthFill.style.background = level[2];
+        strengthLabel.textContent = value
+            ? level[0] + " · " + passed + " of 5 checklist items met"
+            : "Enter a password to check its strength.";
+    }
+
+    function updateMatch() {
+        const hasConfirmation = confirmPassword.value.length > 0;
+        const matches = hasConfirmation && newPassword.value === confirmPassword.value;
+
+        if (!hasConfirmation) {
+            matchMessage.textContent = "Your passwords will be checked as you type.";
+            matchMessage.style.color = "";
+            confirmPassword.setCustomValidity("");
+            return;
+        }
+
+        matchMessage.textContent = matches ? "✓ Passwords match." : "Passwords do not match.";
+        matchMessage.style.color = matches ? "#72ddb0" : "#ff9eac";
+        confirmPassword.setCustomValidity(matches ? "" : "The new passwords do not match.");
+    }
+
+    newPassword.addEventListener("input", () => {
+        updateStrength();
+        updateMatch();
+    });
+
+    confirmPassword.addEventListener("input", updateMatch);
+
+    form.addEventListener("submit", event => {
+        updateMatch();
+
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            form.reportValidity();
+        }
+    });
+
+    updateStrength();
+})();
+</script>
+</body>
+</html>
