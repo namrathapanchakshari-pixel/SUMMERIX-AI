@@ -1,0 +1,1 @@
+SUMMARIX AI admin upgrade bundle. Contains four admin templates, a route patch, and installation notes. It intentionally excludes .env, database, uploads, saved results, and credentials.

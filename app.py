@@ -1,104 +1,52 @@
 import io
 import os
 import re
+import sqlite3
+import uuid
+from datetime import datetime
 from functools import wraps
 
-import sqlite3
-
-import uuid
-
-from datetime import datetime
-
 from dotenv import load_dotenv
-
 from flask import (
-
     Flask,
-
     jsonify,
-
     redirect,
-
     render_template,
-
     request,
-
     send_file,
-
     session,
-
     url_for,
-
 )
-
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from authlib.integrations.flask_client import OAuth
 
 from ai_summarizer import (
-
     answer_document_question,
-
     answer_result_question,
-
     process_document_tool,
-
 )
+from chatbot_ai import chat_reply, search_videos, study_reply
+from document_processor import extract_document, extract_text
 
-from chatbot_ai import (
-
-    chat_reply,
-
-    search_videos,
-
-    study_reply,
-
-)
-
-from document_processor import (
-
-    extract_document,
-
-    extract_text,
-
-)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-
-load_dotenv(
-
-    os.path.join(BASE_DIR, ".env"),
-
-    override=True,
-
-)
+load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)
 
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
-
 STATE_FOLDER = os.path.join(BASE_DIR, "runtime_state")
-
 DATABASE_PATH = os.path.join(STATE_FOLDER, "summarix.db")
+SAVED_RESULTS_FOLDER = os.path.join(BASE_DIR, "saved_results")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(STATE_FOLDER, exist_ok=True)
+os.makedirs(SAVED_RESULTS_FOLDER, exist_ok=True)
 
-ALLOWED_EXTENSIONS = {".pdf", ".docx"}
-
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt"}
 RESULTS = {}
-
 DOCUMENTS = {}
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-os.makedirs(STATE_FOLDER, exist_ok=True)
-
 app = Flask(__name__)
-
-app.secret_key = os.getenv(
-
-    "FLASK_SECRET_KEY",
-
-    "change-this-secret-key",
-
-)
-
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "change-this-secret-key")
 app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
 
 # Google Sign-In (configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env).
@@ -111,236 +59,146 @@ google = oauth.register(
     client_kwargs={"scope": "openid email profile"},
 )
 
+
 def google_oauth_is_configured():
     return bool(os.getenv("GOOGLE_CLIENT_ID") and os.getenv("GOOGLE_CLIENT_SECRET"))
 
+
 def get_database():
-
     connection = sqlite3.connect(DATABASE_PATH)
-
     connection.row_factory = sqlite3.Row
-
     return connection
 
+
 def initialize_database():
-
     with get_database() as connection:
-
         connection.executescript(
-
             """
-
             CREATE TABLE IF NOT EXISTS conversations (
-
                 id TEXT PRIMARY KEY,
-
                 user_id INTEGER,
-
                 title TEXT NOT NULL,
-
                 created_at TEXT NOT NULL
-
             );
 
             CREATE TABLE IF NOT EXISTS messages (
-
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-
                 conversation_id TEXT NOT NULL,
-
                 role TEXT NOT NULL,
-
                 content TEXT NOT NULL,
-
                 created_at TEXT NOT NULL
-
             );
 
             CREATE TABLE IF NOT EXISTS admins (
-
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-
                 username TEXT UNIQUE NOT NULL,
-
                 password TEXT NOT NULL,
-
                 created_at TEXT NOT NULL
-
             );
 
             CREATE TABLE IF NOT EXISTS users (
-
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-
                 username TEXT UNIQUE NOT NULL,
-
                 email TEXT UNIQUE,
-
                 created_at TEXT NOT NULL
-
             );
 
             CREATE TABLE IF NOT EXISTS documents (
-
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-
                 user_id INTEGER,
-
                 filename TEXT NOT NULL,
-
                 uploaded_at TEXT NOT NULL
-
             );
 
             CREATE TABLE IF NOT EXISTS activity_logs (
-
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-
                 user_id INTEGER,
-
                 action TEXT NOT NULL,
-
                 details TEXT,
-
                 created_at TEXT NOT NULL
-
             );
 
+            CREATE TABLE IF NOT EXISTS saved_results (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                original_filename TEXT NOT NULL,
+                filename TEXT NOT NULL,
+                tool TEXT NOT NULL,
+                file_path TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
             """
-
         )
 
-        # Add password_hash to older databases without deleting existing users.
-        user_columns = {row[1] for row in connection.execute("PRAGMA table_info(users)")}
+        # Add columns to older databases without deleting existing data.
+        user_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(users)")
+        }
         if "password_hash" not in user_columns:
             connection.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
 
-        conversation_columns = {row[1] for row in connection.execute("PRAGMA table_info(conversations)")}
+        conversation_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(conversations)")
+        }
         if "user_id" not in conversation_columns:
             connection.execute("ALTER TABLE conversations ADD COLUMN user_id INTEGER")
 
 
 initialize_database()
 
+
 def allowed_file(filename):
+    return os.path.splitext(filename)[1].lower() in ALLOWED_EXTENSIONS
 
-    extension = os.path.splitext(filename)[1].lower()
-
-    return extension in ALLOWED_EXTENSIONS
 
 def safe_upload_path(file_path):
-
     try:
-
         return (
-
             os.path.commonpath(
-
-                [
-
-                    os.path.abspath(file_path),
-
-                    os.path.abspath(UPLOAD_FOLDER),
-
-                ]
-
+                [os.path.abspath(file_path), os.path.abspath(UPLOAD_FOLDER)]
             )
-
             == os.path.abspath(UPLOAD_FOLDER)
-
         )
-
     except ValueError:
-
         return False
 
+
 def current_document():
-
     file_path = session.get("document_path")
-
     document_name = session.get("document_name")
-
     if (
-
         not file_path
-
         or not document_name
-
         or not safe_upload_path(file_path)
-
         or not os.path.exists(file_path)
-
     ):
-
-        raise ValueError(
-
-            "Please upload a PDF or DOCX document first."
-
-        )
+        raise ValueError("Please upload a PDF or DOCX document first.")
 
     text = extract_text(file_path)
-
     if not text.strip():
-
-        raise ValueError(
-
-            "No readable text was found in the document."
-
-        )
-
+        raise ValueError("No readable text was found in the document.")
     return document_name, text
 
+
 def selected_chat_documents():
-
     document_ids = session.get("chat_document_ids", [])
-
     return [
-
         DOCUMENTS[document_id]
-
         for document_id in document_ids
-
         if document_id in DOCUMENTS
-
     ]
 
+
 def save_message(conversation_id, role, content):
-
     with get_database() as connection:
-
         connection.execute(
-
             """
-
-            INSERT INTO messages (
-
-                conversation_id,
-
-                role,
-
-                content,
-
-                created_at
-
-            )
-
+            INSERT INTO messages (conversation_id, role, content, created_at)
             VALUES (?, ?, ?, ?)
-
             """,
-
-            (
-
-                conversation_id,
-
-                role,
-
-                content,
-
-                datetime.utcnow().isoformat(),
-
-            ),
-
+            (conversation_id, role, content, datetime.utcnow().isoformat()),
         )
+
 
 def ensure_conversation(conversation_id, first_text="New conversation"):
     conversation_id = str(conversation_id or uuid.uuid4().hex)
@@ -351,15 +209,20 @@ def ensure_conversation(conversation_id, first_text="New conversation"):
             (conversation_id, user_id),
         ).fetchone()
         if not existing:
-            # If a client submits an ID belonging to another account, use a new ID.
-            if connection.execute("SELECT 1 FROM conversations WHERE id = ?", (conversation_id,)).fetchone():
+            if connection.execute(
+                "SELECT 1 FROM conversations WHERE id = ?", (conversation_id,)
+            ).fetchone():
                 conversation_id = uuid.uuid4().hex
             title = " ".join(str(first_text).split())[:55] or "New conversation"
             connection.execute(
-                "INSERT INTO conversations (id, user_id, title, created_at) VALUES (?, ?, ?, ?)",
+                """
+                INSERT INTO conversations (id, user_id, title, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
                 (conversation_id, user_id, title, datetime.utcnow().isoformat()),
             )
     return conversation_id
+
 
 def login_required(view):
     @wraps(view)
@@ -380,597 +243,255 @@ def home():
         return redirect(url_for("admin_dashboard"))
     return redirect(url_for("user_login"))
 
+
 @app.route("/workspace", methods=["GET", "POST"])
 @login_required
 def workspace():
-
     result = None
-
     error = None
-
     formatting = {}
-
-    active_tool = request.args.get(
-
-        "tool",
-
-        "summary",
-
-    )
-
+    active_tool = request.args.get("tool", "summary")
     custom_query = ""
 
     if request.method == "POST":
-
-        active_tool = request.form.get(
-
-            "tool",
-
-            "summary",
-
-        )
-
-        custom_query = request.form.get(
-
-            "custom_query",
-
-            "",
-
-        ).strip()
-
+        active_tool = request.form.get("tool", "summary")
+        custom_query = request.form.get("custom_query", "").strip()
         try:
-
             uploaded_file = request.files.get("document")
-
             if uploaded_file and uploaded_file.filename:
-
-                filename = secure_filename(
-
-                    uploaded_file.filename
-
-                )
-
+                filename = secure_filename(uploaded_file.filename)
                 if not allowed_file(filename):
-
-                    raise ValueError(
-
-                        "Only PDF and DOCX files are supported."
-
-                    )
-
+                    raise ValueError("Only PDF, DOCX, and TXT files are supported.")
                 file_path = os.path.join(
-
-                    UPLOAD_FOLDER,
-
-                    f"{uuid.uuid4().hex}_{filename}",
-
+                    UPLOAD_FOLDER, f"{uuid.uuid4().hex}_{filename}"
                 )
-
                 uploaded_file.save(file_path)
-
+                now = datetime.now().isoformat(timespec="seconds")
                 with get_database() as connection:
                     connection.execute(
                         "INSERT INTO documents (user_id, filename, uploaded_at) VALUES (?, ?, ?)",
-                        (session["user_id"], filename, datetime.now().isoformat(timespec="seconds")),
+                        (session["user_id"], filename, now),
                     )
                     connection.execute(
                         "INSERT INTO activity_logs (user_id, action, details, created_at) VALUES (?, ?, ?, ?)",
-                        (session["user_id"], "Document uploaded", filename, datetime.now().isoformat(timespec="seconds")),
+                        (session["user_id"], "Document uploaded", filename, now),
                     )
-
                 session["document_path"] = file_path
-
                 session["document_name"] = filename
 
-            _, document_text = current_document()
-
+            document_name, document_text = current_document()
             result_data = process_document_tool(
-
                 text=document_text,
-
                 tool=active_tool,
-
                 custom_query=custom_query,
-
-                summary_length=request.form.get(
-
-                    "summary_length",
-
-                    "medium",
-
-                ),
-
-                summary_style=request.form.get(
-
-                    "summary_style",
-
-                    "paragraph",
-
-                ),
-
-                paraphrase_style=request.form.get(
-
-                    "paraphrase_style",
-
-                    "simple",
-
-                ),
-
-                question_count=request.form.get(
-
-                    "question_count",
-
-                    10,
-
-                ),
-
+                summary_length=request.form.get("summary_length", "medium"),
+                summary_style=request.form.get("summary_style", "paragraph"),
+                paraphrase_style=request.form.get("paraphrase_style", "simple"),
+                question_count=request.form.get("question_count", 10),
             )
-
             result = result_data["content"]
-
             formatting = result_data["formatting"]
-
             result_id = uuid.uuid4().hex
-
-            RESULTS[result_id] = {
-
-                "result": result,
-
-                "document": document_text,
-
-            }
-
+            original_name = session.get("document_name") or "document.txt"
+            safe_base = secure_filename(os.path.splitext(original_name)[0]) or "document"
+            safe_tool = secure_filename(active_tool) or "result"
+            result_filename = f"{safe_base}_{safe_tool}_{result_id[:8]}.txt"
+            result_path = os.path.join(SAVED_RESULTS_FOLDER, result_filename)
+            created_at = datetime.now().isoformat(timespec="seconds")
+            saved_text = (
+                "SUMMARIX AI - SAVED RESULT\n"
+                f"Original document: {original_name}\n"
+                f"Tool: {active_tool.replace('_', ' ').title()}\n"
+                f"Saved on: {created_at}\n"
+                + "=" * 50
+                + "\n\n"
+                + str(result)
+            )
+            with open(result_path, "w", encoding="utf-8") as result_file:
+                result_file.write(saved_text)
+            with get_database() as connection:
+                connection.execute(
+                    """
+                    INSERT INTO saved_results
+                    (id, user_id, original_filename, filename, tool, file_path, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        result_id, session["user_id"], original_name,
+                        result_filename, active_tool, result_path, created_at,
+                    ),
+                )
+            RESULTS[result_id] = {"result": result, "document": document_text}
             session["last_result_id"] = result_id
-
         except Exception as exception:
-
             error = str(exception)
 
     return render_template(
-
         "workspace.html",
-
         result=result,
-
         error=error,
-
         formatting=formatting,
-
         document_name=session.get("document_name"),
-
         active_tool=active_tool,
-
         custom_query=custom_query,
-
-        result_id=session.get("last_result_id", ""),
-
+        result_id=locals().get("result_id", ""),
     )
+
 
 @app.route("/api/document-question", methods=["POST"])
 @login_required
 def document_question():
-
     try:
-
         data = request.get_json(silent=True) or {}
-
         _, document_text = current_document()
-
-        answer = answer_document_question(
-
-            document_text,
-
-            data.get("question", ""),
-
-        )
-
-        return jsonify(
-
-            success=True,
-
-            answer=answer,
-
-        )
-
+        answer = answer_document_question(document_text, data.get("question", ""))
+        return jsonify(success=True, answer=answer)
     except Exception as exception:
+        return jsonify(success=False, error=str(exception)), 400
 
-        return jsonify(
-
-            success=False,
-
-            error=str(exception),
-
-        ), 400
 
 @app.route("/api/result-question", methods=["POST"])
 @login_required
 def result_question():
-
     try:
-
         data = request.get_json(silent=True) or {}
-
-        result_id = (
-
-            data.get("result_id")
-
-            or session.get("last_result_id")
-
-        )
-
+        result_id = data.get("result_id") or session.get("last_result_id")
         item = RESULTS.get(result_id)
-
         if not item:
-
-            raise ValueError(
-
-                "Generate a result before asking about it."
-
-            )
-
+            raise ValueError("Generate a result before asking about it.")
         answer = answer_result_question(
-
-            item["result"],
-
-            data.get("question", ""),
-
-            item["document"],
-
+            item["result"], data.get("question", ""), item["document"]
         )
-
-        return jsonify(
-
-            success=True,
-
-            answer=answer,
-
-        )
-
+        return jsonify(success=True, answer=answer)
     except Exception as exception:
+        return jsonify(success=False, error=str(exception)), 400
 
-        return jsonify(
 
-            success=False,
-
-            error=str(exception),
-
-        ), 400
-
-@app.route(
-
-    "/api/chat/documents",
-
-    methods=["GET", "POST", "DELETE"],
-
-)
-
+@app.route("/api/chat/documents", methods=["GET", "POST", "DELETE"])
 @login_required
 def chat_documents():
-
     if request.method == "DELETE":
-
         session["chat_document_ids"] = []
-
         return jsonify(success=True)
 
     if request.method == "POST":
-
         try:
-
-            uploaded_files = request.files.getlist(
-
-                "documents"
-
-            )
-
+            uploaded_files = request.files.getlist("documents")
             if not uploaded_files:
-
-                raise ValueError(
-
-                    "Choose one or more PDF or DOCX files."
-
-                )
-
-            document_ids = session.get(
-
-                "chat_document_ids",
-
-                [],
-
-            )
-
+                raise ValueError("Choose one or more PDF, DOCX, or TXT files.")
+            document_ids = session.get("chat_document_ids", [])
             for uploaded_file in uploaded_files[:5]:
-
-                filename = secure_filename(
-
-                    uploaded_file.filename
-
-                )
-
-                if (
-
-                    not filename
-
-                    or not allowed_file(filename)
-
-                ):
-
-                    raise ValueError(
-
-                        "Only PDF and DOCX files are supported."
-
-                    )
-
+                filename = secure_filename(uploaded_file.filename)
+                if not filename or not allowed_file(filename):
+                    raise ValueError("Only PDF, DOCX, and TXT files are supported.")
                 file_path = os.path.join(
-
-                    UPLOAD_FOLDER,
-
-                    f"{uuid.uuid4().hex}_{filename}",
-
+                    UPLOAD_FOLDER, f"{uuid.uuid4().hex}_{filename}"
                 )
-
                 uploaded_file.save(file_path)
-
+                now = datetime.now().isoformat(timespec="seconds")
                 with get_database() as connection:
                     connection.execute(
                         "INSERT INTO documents (user_id, filename, uploaded_at) VALUES (?, ?, ?)",
-                        (session["user_id"], filename, datetime.now().isoformat(timespec="seconds")),
+                        (session["user_id"], filename, now),
                     )
                     connection.execute(
                         "INSERT INTO activity_logs (user_id, action, details, created_at) VALUES (?, ?, ?, ?)",
-                        (session["user_id"], "Chat document uploaded", filename, datetime.now().isoformat(timespec="seconds")),
+                        (session["user_id"], "Chat document uploaded", filename, now),
                     )
-
                 document_id = uuid.uuid4().hex
-
-                extracted_document = extract_document(
-
-                    file_path
-
-                )
-
+                extracted_document = extract_document(file_path)
                 DOCUMENTS[document_id] = {
-
                     "id": document_id,
-
                     "path": file_path,
-
                     **extracted_document,
-
                 }
-
                 document_ids.append(document_id)
-
             session["chat_document_ids"] = document_ids[-5:]
-
             return jsonify(
-
                 success=True,
-
                 documents=[
-
-                    {
-
-                        "id": item["id"],
-
-                        "name": item["name"],
-
-                    }
-
+                    {"id": item["id"], "name": item["name"]}
                     for item in selected_chat_documents()
-
                 ],
-
             )
-
         except Exception as exception:
-
-            return jsonify(
-
-                success=False,
-
-                error=str(exception),
-
-            ), 400
+            return jsonify(success=False, error=str(exception)), 400
 
     return jsonify(
-
         success=True,
-
         documents=[
-
-            {
-
-                "id": item["id"],
-
-                "name": item["name"],
-
-            }
-
+            {"id": item["id"], "name": item["name"]}
             for item in selected_chat_documents()
-
         ],
-
     )
 
-@app.route(
 
-    "/api/chat/documents/<document_id>",
-
-    methods=["DELETE"],
-
-)
-
+@app.route("/api/chat/documents/<document_id>", methods=["DELETE"])
 @login_required
 def remove_chat_document(document_id):
-
     session["chat_document_ids"] = [
-
-        item
-
-        for item in session.get(
-
-            "chat_document_ids",
-
-            [],
-
-        )
-
-        if item != document_id
-
+        item for item in session.get("chat_document_ids", []) if item != document_id
     ]
-
     return jsonify(success=True)
+
 
 @app.route("/api/chat", methods=["POST"])
 @login_required
 def chat():
-
     try:
-
         data = request.get_json(silent=True) or {}
-
         messages = data.get("messages", [])
-
         if not isinstance(messages, list):
-
             raise ValueError("Invalid chat history.")
-
         user_text = next(
-
             (
-
                 item.get("content", "")
-
                 for item in reversed(messages)
-
                 if item.get("role") == "user"
-
             ),
-
             "",
-
         )
-
-        conversation_id = ensure_conversation(
-
-            data.get("conversation_id"),
-
-            user_text,
-
-        )
-
+        conversation_id = ensure_conversation(data.get("conversation_id"), user_text)
         answer, sources = chat_reply(
-
             messages=messages,
-
             mode=data.get("mode", "general"),
-
             documents=selected_chat_documents(),
-
             preferences=data.get("preferences", {}),
-
         )
-
-        save_message(
-
-            conversation_id,
-
-            "user",
-
-            user_text,
-
-        )
-
-        save_message(
-
-            conversation_id,
-
-            "assistant",
-
-            answer,
-
-        )
-
+        save_message(conversation_id, "user", user_text)
+        save_message(conversation_id, "assistant", answer)
         return jsonify(
-
             success=True,
-
             conversation_id=conversation_id,
-
             answer=answer,
-
             sources=sources,
-
         )
-
     except Exception as exception:
+        return jsonify(success=False, error=str(exception)), 400
 
-        return jsonify(
-
-            success=False,
-
-            error=str(exception),
-
-        ), 400
 
 @app.route("/api/study", methods=["POST"])
 @login_required
 def study():
-
     try:
-
         data = request.get_json(silent=True) or {}
-
         answer, sources = study_reply(
-
             action=data.get("action"),
-
             topic=data.get("topic"),
-
             documents=selected_chat_documents(),
-
             preferences=data.get("preferences", {}),
-
         )
-
-        return jsonify(
-
-            success=True,
-
-            answer=answer,
-
-            sources=sources,
-
-        )
-
+        return jsonify(success=True, answer=answer, sources=sources)
     except Exception as exception:
+        return jsonify(success=False, error=str(exception)), 400
 
-        return jsonify(
-
-            success=False,
-
-            error=str(exception),
-
-        ), 400
 
 @app.route("/api/chat/videos", methods=["POST"])
 @login_required
 def videos():
-
     data = request.get_json(silent=True) or {}
+    return jsonify(success=True, videos=search_videos(data.get("query", "")))
 
-    return jsonify(
-
-        success=True,
-
-        videos=search_videos(
-
-            data.get("query", "")
-
-        ),
-
-    )
 
 @app.route("/api/conversations", methods=["GET", "DELETE"])
 @login_required
@@ -979,16 +500,19 @@ def conversations():
     with get_database() as connection:
         if request.method == "DELETE":
             connection.execute(
-                "DELETE FROM messages WHERE conversation_id IN (SELECT id FROM conversations WHERE user_id = ?)",
+                "DELETE FROM messages WHERE conversation_id IN "
+                "(SELECT id FROM conversations WHERE user_id = ?)",
                 (user_id,),
             )
             connection.execute("DELETE FROM conversations WHERE user_id = ?", (user_id,))
             return jsonify(success=True)
         rows = connection.execute(
-            "SELECT id, title, created_at FROM conversations WHERE user_id = ? ORDER BY created_at DESC LIMIT 30",
+            "SELECT id, title, created_at FROM conversations WHERE user_id = ? "
+            "ORDER BY created_at DESC LIMIT 30",
             (user_id,),
         ).fetchall()
     return jsonify(success=True, conversations=[dict(row) for row in rows])
+
 
 @app.route("/api/conversations/<conversation_id>", methods=["GET", "DELETE"])
 @login_required
@@ -1002,8 +526,13 @@ def conversation(conversation_id):
         if not owned:
             return jsonify(success=False, error="Conversation not found."), 404
         if request.method == "DELETE":
-            connection.execute("DELETE FROM messages WHERE conversation_id = ?", (conversation_id,))
-            connection.execute("DELETE FROM conversations WHERE id = ? AND user_id = ?", (conversation_id, user_id))
+            connection.execute(
+                "DELETE FROM messages WHERE conversation_id = ?", (conversation_id,)
+            )
+            connection.execute(
+                "DELETE FROM conversations WHERE id = ? AND user_id = ?",
+                (conversation_id, user_id),
+            )
             return jsonify(success=True)
         rows = connection.execute(
             "SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY id",
@@ -1011,189 +540,72 @@ def conversation(conversation_id):
         ).fetchall()
     return jsonify(success=True, messages=[dict(row) for row in rows])
 
+
 @app.route("/api/chat/export", methods=["POST"])
 @login_required
 def export_chat():
-
     data = request.get_json(silent=True) or {}
-
     messages = data.get("messages", [])[-100:]
-
     export_format = data.get("format", "txt")
-
     content = "SUMMARIX AI CHAT EXPORT\n\n"
-
     for item in messages:
-
-        role = str(
-
-            item.get("role", "assistant")
-
-        ).title()
-
-        message = str(item.get("content", ""))
-
-        content += f"{role}: {message}\n\n"
+        role = str(item.get("role", "assistant")).title()
+        content += f"{role}: {str(item.get('content', ''))}\n\n"
 
     if export_format == "docx":
-
         from docx import Document
-
         document = Document()
-
-        document.add_heading(
-
-            "SUMMARIX AI Chat Export",
-
-            0,
-
-        )
-
+        document.add_heading("SUMMARIX AI Chat Export", 0)
         for item in messages:
-
-            document.add_heading(
-
-                str(
-
-                    item.get(
-
-                        "role",
-
-                        "assistant",
-
-                    )
-
-                ).title(),
-
-                2,
-
-            )
-
-            document.add_paragraph(
-
-                str(item.get("content", ""))
-
-            )
-
+            document.add_heading(str(item.get("role", "assistant")).title(), 2)
+            document.add_paragraph(str(item.get("content", "")))
         output = io.BytesIO()
-
         document.save(output)
-
         output.seek(0)
-
         return send_file(
-
             output,
-
             as_attachment=True,
-
             download_name="summarix-chat.docx",
-
-            mimetype=(
-
-                "application/vnd.openxmlformats-officedocument."
-
-                "wordprocessingml.document"
-
-            ),
-
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
 
     if export_format == "pdf":
-
         from reportlab.lib.pagesizes import A4
-
         from reportlab.pdfgen import canvas
-
         output = io.BytesIO()
-
-        pdf = canvas.Canvas(
-
-            output,
-
-            pagesize=A4,
-
-        )
-
-        text = pdf.beginText(40, 800)
-
+        pdf = canvas.Canvas(output, pagesize=A4)
+        text_obj = pdf.beginText(40, 800)
         for line in content.splitlines():
-
-            parts = [
-
-                line[index:index + 95]
-
-                for index in range(
-
-                    0,
-
-                    max(1, len(line)),
-
-                    95,
-
-                )
-
-            ]
-
+            parts = [line[index:index + 95] for index in range(0, max(1, len(line)), 95)]
             for part in parts:
-
-                text.textLine(part)
-
-                if text.getY() < 45:
-
-                    pdf.drawText(text)
-
+                text_obj.textLine(part)
+                if text_obj.getY() < 45:
+                    pdf.drawText(text_obj)
                     pdf.showPage()
-
-                    text = pdf.beginText(40, 800)
-
-        pdf.drawText(text)
-
+                    text_obj = pdf.beginText(40, 800)
+        pdf.drawText(text_obj)
         pdf.save()
-
         output.seek(0)
-
         return send_file(
-
             output,
-
             as_attachment=True,
-
             download_name="summarix-chat.pdf",
-
             mimetype="application/pdf",
-
         )
 
-    output = io.BytesIO(
-
-        content.encode("utf-8")
-
-    )
-
+    output = io.BytesIO(content.encode("utf-8"))
     return send_file(
-
         output,
-
         as_attachment=True,
-
         download_name="summarix-chat.txt",
-
         mimetype="text/plain",
-
     )
+
 
 @app.errorhandler(413)
-
 def file_too_large(error):
+    return jsonify(success=False, error="File is too large. Maximum size is 25 MB."), 413
 
-    return jsonify(
-
-        success=False,
-
-        error="File is too large. Maximum size is 25 MB.",
-
-    ), 413
 
 @app.route("/register", methods=["GET", "POST"])
 def user_register():
@@ -1206,7 +618,7 @@ def user_register():
 
         if len(username) < 3 or len(username) > 40:
             error = "Username must be between 3 and 40 characters."
-        elif not email or "@" not in email:
+        elif not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email):
             error = "Enter a valid email address."
         elif len(password) < 8:
             error = "Password must contain at least 8 characters."
@@ -1216,18 +628,25 @@ def user_register():
             try:
                 with get_database() as connection:
                     cursor = connection.execute(
-                        "INSERT INTO users (username, email, created_at, password_hash) VALUES (?, ?, ?, ?)",
-                        (username, email, datetime.now().isoformat(timespec="seconds"), generate_password_hash(password)),
+                        "INSERT INTO users (username, email, created_at, password_hash) "
+                        "VALUES (?, ?, ?, ?)",
+                        (
+                            username, email, datetime.now().isoformat(timespec="seconds"),
+                            generate_password_hash(password),
+                        ),
                     )
                     user_id = cursor.lastrowid
                 session.clear()
                 session["user_id"] = user_id
                 session["username"] = username
+                session["email"] = email
                 return redirect(url_for("workspace"))
             except sqlite3.IntegrityError:
                 error = "That username or email is already registered."
 
-    return render_template("register.html", error=error, google_enabled=google_oauth_is_configured())
+    return render_template(
+        "register.html", error=error, google_enabled=google_oauth_is_configured()
+    )
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -1238,18 +657,24 @@ def user_login():
         password = request.form.get("password", "")
         with get_database() as connection:
             user = connection.execute(
-                "SELECT id, username, email, password_hash FROM users WHERE username = ? OR email = ?",
+                "SELECT id, username, email, password_hash FROM users "
+                "WHERE username = ? OR email = ?",
                 (username_or_email, username_or_email.lower()),
             ).fetchone()
 
-        if user and user["password_hash"] and check_password_hash(user["password_hash"], password):
+        if user and user["password_hash"] and check_password_hash(
+            user["password_hash"], password
+        ):
             session.clear()
             session["user_id"] = user["id"]
             session["username"] = user["username"]
+            session["email"] = user["email"]
             return redirect(url_for("workspace"))
         error = "Invalid username/email or password."
 
-    return render_template("login.html", error=error, google_enabled=google_oauth_is_configured())
+    return render_template(
+        "login.html", error=error, google_enabled=google_oauth_is_configured()
+    )
 
 
 @app.route("/auth/google")
@@ -1260,8 +685,7 @@ def google_login():
             error="Google Sign-In is not configured yet. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your .env file.",
             google_enabled=False,
         ), 503
-    callback_url = url_for("google_callback", _external=True)
-    return google.authorize_redirect(callback_url)
+    return google.authorize_redirect(url_for("google_callback", _external=True))
 
 
 @app.route("/auth/google/callback")
@@ -1287,10 +711,8 @@ def google_callback():
             user = connection.execute(
                 "SELECT id, username, email FROM users WHERE email = ?", (email,)
             ).fetchone()
-
             if user:
-                user_id = user["id"]
-                username = user["username"]
+                user_id, username = user["id"], user["username"]
             else:
                 base = re.sub(r"[^a-zA-Z0-9_.-]", "", display_name.replace(" ", ""))[:30]
                 if len(base) < 3:
@@ -1304,7 +726,8 @@ def google_callback():
                     username = f"{base[:34]}{suffix}"
                     suffix += 1
                 cursor = connection.execute(
-                    "INSERT INTO users (username, email, created_at, password_hash) VALUES (?, ?, ?, NULL)",
+                    "INSERT INTO users (username, email, created_at, password_hash) "
+                    "VALUES (?, ?, ?, NULL)",
                     (username, email, datetime.now().isoformat(timespec="seconds")),
                 )
                 user_id = cursor.lastrowid
@@ -1334,7 +757,7 @@ def user_profile():
         email = request.form.get("email", "").strip().lower()
         if len(username) < 3 or len(username) > 40:
             error = "Username must be between 3 and 40 characters."
-        elif not email or not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email):
+        elif not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email):
             error = "Enter a valid email address."
         else:
             try:
@@ -1348,6 +771,7 @@ def user_profile():
                 message = "Profile updated successfully."
             except sqlite3.IntegrityError:
                 error = "That username or email is already in use."
+
     with get_database() as connection:
         user = connection.execute(
             "SELECT id, username, email, created_at FROM users WHERE id = ?", (user_id,)
@@ -1356,6 +780,7 @@ def user_profile():
         session.clear()
         return redirect(url_for("user_login"))
     return render_template("profile.html", user=user, message=message, error=error)
+
 
 @app.route("/settings", methods=["GET", "POST"])
 @login_required
@@ -1389,15 +814,39 @@ def user_settings():
                     message = "Password changed successfully."
     return render_template("settings.html", message=message, error=error)
 
+
 @app.route("/history")
 @login_required
 def user_history():
     with get_database() as connection:
-        documents = connection.execute(
+        uploaded = connection.execute(
             "SELECT id, filename, uploaded_at FROM documents WHERE user_id = ? ORDER BY id DESC LIMIT 200",
             (session["user_id"],),
         ).fetchall()
-    return render_template("history.html", documents=documents)
+        saved = connection.execute(
+            "SELECT id, filename, original_filename, tool, created_at FROM saved_results "
+            "WHERE user_id = ? ORDER BY created_at DESC LIMIT 200",
+            (session["user_id"],),
+        ).fetchall()
+
+    items = []
+    for row in uploaded:
+        item = dict(row)
+        item["kind"] = "document"
+        item["history_type"] = "Uploaded document"
+        items.append(item)
+    for row in saved:
+        item = dict(row)
+        item["kind"] = "result"
+        item["result_id"] = item["id"]
+        item["uploaded_at"] = item["created_at"]
+        item["history_type"] = (
+            "Saved AI result · " + str(item.get("tool", "result")).replace("_", " ").title()
+        )
+        items.append(item)
+    items.sort(key=lambda item: str(item.get("uploaded_at", "")), reverse=True)
+    return render_template("history.html", documents=items[:200])
+
 
 @app.route("/logout")
 def user_logout():
@@ -1406,141 +855,147 @@ def user_logout():
 
 
 @app.route("/admin/login", methods=["GET", "POST"])
-
 def admin_login():
-
     error = None
-
     if request.method == "POST":
-
         username = request.form.get("username", "").strip()
-
         password = request.form.get("password", "")
-
         with get_database() as connection:
-
             admin = connection.execute(
-
-                """
-
-                SELECT id, username, password
-
-                FROM admins
-
-                WHERE username = ?
-
-                """,
-
-                (username,),
-
+                "SELECT id, username, password FROM admins WHERE username = ?", (username,)
             ).fetchone()
 
         if admin and check_password_hash(admin["password"], password):
-
             session["admin_id"] = admin["id"]
-
             session["admin_username"] = admin["username"]
-
             return redirect(url_for("admin_dashboard"))
-
         error = "Invalid username or password."
-
     return render_template("admin_login.html", error=error)
 
+
 @app.route("/admin/dashboard")
-
 def admin_dashboard():
-
     if "admin_id" not in session:
-
         return redirect(url_for("admin_login"))
 
     with get_database() as connection:
-
-        admin_count = connection.execute(
-
-            "SELECT COUNT(*) FROM admins"
-
-        ).fetchone()[0]
-
-        user_count = connection.execute(
-
-            "SELECT COUNT(*) FROM users"
-
-        ).fetchone()[0]
-
-        document_count = connection.execute(
-
-            "SELECT COUNT(*) FROM documents"
-
-        ).fetchone()[0]
-
-        activity_count = connection.execute(
-
-            "SELECT COUNT(*) FROM activity_logs"
-
-        ).fetchone()[0]
-
+        admin_count = connection.execute("SELECT COUNT(*) FROM admins").fetchone()[0]
+        user_count = connection.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        document_count = connection.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
+        activity_count = connection.execute("SELECT COUNT(*) FROM activity_logs").fetchone()[0]
         recent_activities = connection.execute(
-
-            """
-
-            SELECT action, details, created_at
-
-            FROM activity_logs
-
-            ORDER BY id DESC
-
-            LIMIT 10
-
-            """
-
+            "SELECT action, details, created_at FROM activity_logs ORDER BY id DESC LIMIT 10"
         ).fetchall()
 
     return render_template(
-
         "admin_dashboard.html",
-
         admin_username=session.get("admin_username", "Admin"),
-
         admin_count=admin_count,
-
         user_count=user_count,
-
         document_count=document_count,
-
         activity_count=activity_count,
-
         recent_activities=recent_activities,
-
     )
 
-@app.route("/admin/logout")
 
+@app.route("/admin/logout", endpoint="admin_logout")
 def admin_logout():
-
     session.pop("admin_id", None)
-
     session.pop("admin_username", None)
-
     return redirect(url_for("admin_login"))
 
+
+@app.route("/admin/users")
+def admin_users():
+    if "admin_id" not in session:
+        return redirect(url_for("admin_login"))
+    with get_database() as connection:
+        users = connection.execute(
+            "SELECT id, username, email, created_at FROM users ORDER BY id DESC"
+        ).fetchall()
+    return render_template("admin_users.html", users=users)
+
+
+@app.route("/admin/documents")
+def admin_documents():
+    if "admin_id" not in session:
+        return redirect(url_for("admin_login"))
+    with get_database() as connection:
+        documents = connection.execute(
+            """
+            SELECT documents.id, documents.filename, documents.uploaded_at,
+                   users.username, users.email
+            FROM documents LEFT JOIN users ON users.id = documents.user_id
+            ORDER BY documents.id DESC
+            """
+        ).fetchall()
+    return render_template("admin_documents.html", documents=documents)
+
+
+@app.route("/saved-result/<result_id>")
+@login_required
+def view_saved_result(result_id):
+    with get_database() as connection:
+        saved = connection.execute(
+            """
+            SELECT id, filename, original_filename, tool, created_at, file_path
+            FROM saved_results WHERE id = ? AND user_id = ?
+            """,
+            (result_id, session["user_id"]),
+        ).fetchone()
+    if not saved:
+        return "Saved result not found.", 404
+
+    file_path = saved["file_path"]
+    try:
+        safe_path = (
+            os.path.commonpath(
+                [os.path.abspath(file_path), os.path.abspath(SAVED_RESULTS_FOLDER)]
+            )
+            == os.path.abspath(SAVED_RESULTS_FOLDER)
+        )
+    except ValueError:
+        safe_path = False
+    if not safe_path or not os.path.isfile(file_path):
+        return "The saved text file is unavailable.", 404
+
+    with open(file_path, "r", encoding="utf-8") as result_file:
+        content = result_file.read()
+    return render_template("saved_result.html", saved=saved, content=content)
+
+
+@app.route("/saved-result/<result_id>/download")
+@login_required
+def download_saved_result(result_id):
+    with get_database() as connection:
+        saved = connection.execute(
+            "SELECT filename, file_path FROM saved_results WHERE id = ? AND user_id = ?",
+            (result_id, session["user_id"]),
+        ).fetchone()
+    if not saved:
+        return "Saved result not found.", 404
+
+    file_path = saved["file_path"]
+    try:
+        safe_path = (
+            os.path.commonpath(
+                [os.path.abspath(file_path), os.path.abspath(SAVED_RESULTS_FOLDER)]
+            )
+            == os.path.abspath(SAVED_RESULTS_FOLDER)
+        )
+    except ValueError:
+        safe_path = False
+    if not safe_path or not os.path.isfile(file_path):
+        return "The saved text file is unavailable.", 404
+
+    return send_file(
+        file_path,
+        as_attachment=True,
+        download_name=saved["filename"],
+        mimetype="text/plain; charset=utf-8",
+    )
+
+
 if __name__ == "__main__":
-
-    print(
-
-        "SUMMARIX AI: "
-
-        "http://127.0.0.1:5000/workspace"
-
-    )
-
-    app.run(
-
-        host="127.0.0.1",
-
-        port=5000,
-
-        debug=True,
-
-    )
+    print("SUMMARIX AI: http://127.0.0.1:5000/workspace")
+    app.run(host="127.0.0.1", port=5000, debug=True)

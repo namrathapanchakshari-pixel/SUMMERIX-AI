@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,176 +5,103 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SUMMARIX AI | Study Workspace</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
     <style>
-        /* Professional account navigation */
-        .topbar {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-            flex-wrap: wrap;
-        }
-
-        .topbar .logo {
-            flex-shrink: 0;
-            order: 1;
-        }
-
-        .summarix-account-nav {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-left: auto;
-            order: 2;
-        }
-
-        .summarix-account-nav .account-nav-link {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 13px;
-            border: 1px solid rgba(148, 163, 184, 0.22);
-            border-radius: 11px;
-            background: rgba(255, 255, 255, 0.045);
-            color: #dce6fb;
-            font-family: 'Inter', sans-serif;
+        /* Header and profile dropdown */
+        .topbar { display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:nowrap; position:relative; z-index:20; }
+        .topbar .logo { margin-right:auto; flex:0 0 auto; text-decoration:none; }
+        .header-actions { display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-left:auto; }
+        .profile-menu-wrap { position:relative; flex:0 0 auto; }
+        .profile-button { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; padding:0; border:1px solid rgba(167,139,250,.48); border-radius:50%; color:#eeeaff; background:linear-gradient(145deg,rgba(124,92,255,.28),rgba(59,130,246,.18)); cursor:pointer; transition:transform .18s ease,border-color .18s ease,background .18s ease; }
+        .profile-button:hover, .profile-button[aria-expanded="true"] { transform:translateY(-1px); border-color:#a78bfa; background:rgba(124,92,255,.3); }
+        .profile-button:focus-visible, .profile-dropdown a:focus-visible { outline:2px solid #a78bfa; outline-offset:3px; }
+        .profile-button svg { width:22px; height:22px; }
+        .profile-dropdown { position:absolute; top:calc(100% + 12px); right:0; width:230px; padding:8px; border:1px solid rgba(148,163,184,.23); border-radius:15px; background:#171827; box-shadow:0 18px 50px rgba(0,0,0,.4); display:none; z-index:1000; }
+        .profile-dropdown.open { display:block; }
+        .profile-dropdown .profile-menu-heading { padding:10px 12px 12px; color:#a5b4fc; font-size:10px; font-weight:800; letter-spacing:1.3px; text-transform:uppercase; }
+        .profile-dropdown a { display:flex; align-items:center; gap:11px; width:100%; box-sizing:border-box; padding:11px 12px; border-radius:9px; color:#e2e8f0; font-size:13px; font-weight:600; text-decoration:none; transition:background .15s ease,color .15s ease; }
+        .profile-dropdown a:hover { background:rgba(139,124,255,.14); color:#fff; }
+        .profile-dropdown a svg { width:17px; height:17px; color:#a5b4fc; flex:0 0 auto; }
+        .profile-dropdown .profile-menu-divider { height:1px; margin:7px 4px; background:rgba(148,163,184,.16); }
+        .profile-dropdown a.logout-link, .profile-dropdown a.logout-link svg { color:#fda4af; }
+        .profile-dropdown a.logout-link:hover { background:rgba(248,113,113,.12); color:#fecdd3; }
+        @media (max-width:760px) { .topbar { gap:10px; } .header-actions { gap:8px; } .profile-button { width:40px; height:40px; } .profile-dropdown { right:0; width:min(230px,calc(100vw - 32px)); } }
+        .selected-file-status {
+            display: block;
+            margin: 10px 0 16px;
+            padding: 10px 12px;
+            border: 1px solid rgba(139, 124, 255, .28);
+            border-radius: 10px;
+            background: rgba(124, 92, 255, .08);
+            color: #cfd5ff;
             font-size: 12px;
-            font-weight: 600;
-            line-height: 1.4;
-            text-decoration: none;
-            white-space: nowrap;
-            transition: all 0.2s ease;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
         }
-
-        .summarix-account-nav .account-nav-link:hover {
-            color: #ffffff;
-            background: rgba(124, 92, 255, 0.18);
-            border-color: rgba(139, 124, 255, 0.7);
-            box-shadow: 0 4px 16px rgba(95, 75, 220, 0.12);
-            transform: translateY(-1px);
-        }
-
-        .summarix-account-nav .account-nav-link:focus-visible {
-            outline: 2px solid #a99aff;
-            outline-offset: 3px;
-        }
-
-        .summarix-account-nav .account-logout {
-            color: #ffb9c1;
-            border-color: rgba(248, 113, 113, 0.25);
-            background: rgba(248, 113, 113, 0.06);
-        }
-
-        .summarix-account-nav .account-logout:hover {
-            color: #ffffff;
-            background: rgba(220, 65, 85, 0.2);
-            border-color: rgba(248, 113, 113, 0.6);
-        }
-
-        /* Header layout on smaller screens */
-        @media (max-width: 1000px) {
-            .topbar {
-                gap: 12px;
-            }
-
-            .summarix-account-nav {
-                gap: 6px;
-            }
-
-            .summarix-account-nav .account-nav-link {
-                padding: 8px 10px;
-                font-size: 11px;
-            }
-        }
-
+        .selected-file-status.is-error { color: #ffc0c6; border-color: rgba(248, 113, 113, .45); }
+        .selected-file-status.is-empty { color: #9aa9c2; }
+        .chat-file-input { display: none; }
         @media (max-width: 760px) {
-            .topbar {
-                justify-content: space-between;
-            }
-
-            .topbar .logo {
-                order: 1;
-            }
-
-            .topbar .open-chat {
-                order: 2;
-            }
-
+            .topbar { align-items: center; }
             .summarix-account-nav {
                 order: 3;
+                justify-content: flex-start;
                 width: 100%;
                 margin: 4px 0 0;
-                padding-top: 12px;
-                justify-content: flex-start;
-                border-top: 1px solid rgba(148, 163, 184, 0.15);
+                padding-top: 10px;
+                border-top: 1px solid rgba(148, 163, 184, .14);
+            }
+            .summarix-account-nav .account-nav-link {
+                padding: 8px 11px;
+                font-size: 11px;
             }
         }
     </style>
 </head>
-
 <body>
-
-
 <header class="topbar">
-    <a class="logo" href="{{ url_for('workspace') }}">
-        <span class="logo-mark">✦</span>
-        <span>SUMMARIX <span class="logo-ai">AI</span></span>
-    </a>
-
-    <div class="topbar-actions">
-        <a class="profile-trigger"
-           href="{{ url_for('user_profile') }}"
-           aria-label="Open your profile"
-           title="My Profile">
-            <span class="profile-avatar">
-                {{ session.get('username', 'U')[0]|upper }}
-            </span>
-            <span class="profile-trigger-text">
-                <strong>{{ session.get('username', 'User') }}</strong>
-                <small>My account</small>
-            </span>
-            <span class="profile-chevron">⌄</span>
-        </a>
+    <a class="logo" href="{{ url_for('workspace') }}">SUMMARIX <span>AI</span></a>
+    <div class="header-actions">
+        <button class="open-chat" id="openChat" type="button">✦ Open AI Copilot</button>
+        <div class="profile-menu-wrap" id="profileMenuWrap">
+            <button class="profile-button" id="profileMenuButton" type="button" aria-label="Open profile menu" aria-haspopup="true" aria-expanded="false" aria-controls="profileDropdown" title="Profile and account options">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.6-3.4 3.2-5.3 7-5.3s6.4 1.9 7 5.3"></path></svg>
+            </button>
+            <nav class="profile-dropdown" id="profileDropdown" aria-label="Profile menu">
+                <div class="profile-menu-heading">Account menu</div>
+                <a href="{{ url_for('user_profile') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.6-3.4 3.2-5.3 7-5.3s6.4 1.9 7 5.3"></path></svg>My Profile</a>
+                <a href="{{ url_for('user_history') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l3 2"></path></svg>Document History</a>
+                <a href="{{ url_for('user_settings') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15.2 21 16.5 19.5 19l-2-.6a7.5 7.5 0 0 1-1.5.9l-.4 2h-3l-.4-2a7.5 7.5 0 0 1-1.5-.9l-2 .6L7.2 16.5l1.6-1.3a7 7 0 0 1 0-1.8l-1.6-1.3 1.5-2.5 2 .6a7.5 7.5 0 0 1 1.5-.9l.4-2h3l.4 2a7.5 7.5 0 0 1 1.5.9l2-.6 1.5 2.5-1.6 1.3a7 7 0 0 1 0 1.8Z"></path></svg>Settings</a>
+                <div class="profile-menu-divider"></div>
+                <a class="logout-link" href="{{ url_for('user_logout') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"></path></svg>Log out</a>
+            </nav>
+        </div>
     </div>
 </header>
 
-
 <main class="workspace">
-
     <section class="hero">
         <p>AI POWERED LEARNING WORKSPACE</p>
         <h1>Understand documents <span>faster.</span></h1>
         <small>Summarize, rewrite, study, and chat with your learning materials.</small>
     </section>
 
-    {% if error %}
-        <div class="error">{{ error }}</div>
-    {% endif %}
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
 
     <div class="workspace-grid">
-
         <section class="panel tool-panel">
             <div class="panel-heading">
-                <div>
-                    <p>DOCUMENT STUDIO</p>
-                    <h2>Generate from your file</h2>
-                </div>
+                <div><p>DOCUMENT STUDIO</p><h2>Generate from your file</h2></div>
                 <span>⌁</span>
             </div>
-
-            <form method="POST" enctype="multipart/form-data">
-
-                <label class="file-drop">
-                    <input type="file" name="document" accept=".pdf,.docx">
-                    <b>Upload PDF or DOCX</b>
-                    <small>Maximum file size: 25 MB</small>
+            <form id="workspaceUploadForm" method="POST" enctype="multipart/form-data">
+                <label class="file-drop" for="workspaceDocument">
+                    <input id="workspaceDocument" type="file" name="document" accept=".pdf,.docx,.txt">
+                    <b>Upload PDF, DOCX, or TXT</b>
+                    <small>Click to choose a file · Maximum file size: 25 MB</small>
                 </label>
-
-                {% if document_name %}
-                    <div class="file-status">● {{ document_name }}</div>
-                {% endif %}
+                <div id="workspaceFileStatus" class="selected-file-status {% if not document_name %}is-empty{% endif %}" aria-live="polite">
+                    {% if document_name %}Selected: {{ document_name }}{% else %}No file selected yet.{% endif %}
+                </div>
 
                 <label for="tool">Choose tool</label>
                 <select name="tool" id="tool">
@@ -186,632 +112,358 @@
                 </select>
 
                 <div class="tool-options" id="summaryOptions">
-                    <label>Summary length</label>
-                    <select name="summary_length">
-                        <option value="short">Short</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="long">Detailed</option>
+                    <label for="summary_length">Summary length</label>
+                    <select name="summary_length" id="summary_length">
+                        <option value="short">Short</option><option value="medium" selected>Medium</option><option value="long">Detailed</option>
                     </select>
-
-                    <label>Summary style</label>
-                    <select name="summary_style">
-                        <option value="paragraph">Paragraphs</option>
-                        <option value="bullet">Bullet points</option>
+                    <label for="summary_style">Summary style</label>
+                    <select name="summary_style" id="summary_style">
+                        <option value="paragraph">Paragraphs</option><option value="bullet">Bullet points</option>
                     </select>
                 </div>
-
                 <div class="tool-options hidden" id="paraphraseOptions">
-                    <label>Writing style</label>
-                    <select name="paraphrase_style">
-                        <option value="simple">Simple</option>
-                        <option value="professional">Professional</option>
-                        <option value="academic">Academic</option>
-                        <option value="creative">Creative</option>
+                    <label for="paraphrase_style">Writing style</label>
+                    <select name="paraphrase_style" id="paraphrase_style">
+                        <option value="simple">Simple</option><option value="professional">Professional</option><option value="academic">Academic</option><option value="creative">Creative</option>
                     </select>
                 </div>
-
                 <div class="tool-options hidden" id="questionOptions">
-                    <label>Number of questions</label>
-                    <select name="question_count">
-                        <option value="5">5</option>
-                        <option value="10" selected>10</option>
-                        <option value="15">15</option>
-                        <option value="20">20</option>
+                    <label for="question_count">Number of questions</label>
+                    <select name="question_count" id="question_count">
+                        <option value="5">5</option><option value="10" selected>10</option><option value="15">15</option><option value="20">20</option>
                     </select>
                 </div>
-
-                <label for="customQuery">Additional instructions</label>
-                <textarea id="customQuery" name="custom_query" placeholder="Example: Explain simply with bullet points.">{{ custom_query }}</textarea>
-
-                <button class="generate" type="submit">
-                    Generate with AI <span>→</span>
-                </button>
+                <label for="custom_query">Additional instructions</label>
+                <textarea name="custom_query" id="custom_query" placeholder="Example: Explain simply with bullet points.">{{ custom_query }}</textarea>
+                <button class="generate" type="submit">Generate with AI <span>→</span></button>
             </form>
         </section>
 
-        <section class="panel result-panel">
-            <div class="panel-heading">
-                <div>
-                    <p>OUTPUT</p>
-                    <h2>Generated result</h2>
-                </div>
+     
+<section class="panel result-panel">
+    <div class="panel-heading">
+        <div>
+            <p>OUTPUT</p>
+            <h2>Generated result</h2>
+        </div>
+        {% if result %}
+            <button class="small-btn" id="copyResult" type="button">Copy</button>
+        {% endif %}
+    </div>
 
-                {% if result %}
-                    <button class="small-btn" id="copyResult" type="button">Copy</button>
-                {% endif %}
-            </div>
-
-            {% if result %}
-                <article class="result" id="resultText">{{ result }}</article>
-
-                <div class="document-question">
-                    <h3>Ask your document</h3>
-                    <textarea id="documentQuestion" placeholder="Ask a question about your uploaded document..."></textarea>
-                    <button class="secondary" id="askDocument" type="button">Ask document</button>
-                    <div class="document-answer hidden" id="documentAnswer"></div>
-                </div>
-            {% else %}
-                <div class="empty">
-                    <i>✦</i>
-                    <h3>Your output will appear here</h3>
-                    <p>Upload a document, choose a tool, and generate your first result.</p>
-                </div>
+    {% if result %}
+        <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+            {% if result_id %}
+                <a
+                    class="small-btn"
+                    href="{{ url_for('download_saved_result', result_id=result_id) }}"
+                    style="text-decoration:none;display:inline-flex;align-items:center;"
+                >
+                    Download TXT ↓
+                </a>
             {% endif %}
-        </section>
+        </div>
 
+        <article class="result" id="resultText">{{ result }}</article>
+
+        <div class="document-question">
+            <h3>Ask your document</h3>
+            <textarea id="documentQuestion" placeholder="Ask a question about your uploaded document..."></textarea>
+            <button class="secondary" id="askDocument" type="button">Ask document</button>
+            <div class="document-answer hidden" id="documentAnswer"></div>
+        </div>
+    {% else %}
+        <div class="empty">
+            <i>✦</i>
+            <h3>Your output will appear here</h3>
+            <p>Upload a document, choose a tool, and generate your first result.</p>
+        </div>
+    {% endif %}
+</section>
+   
     </div>
 </main>
 
-<button class="chat-fab" id="chatFab" aria-label="Open SUMMARIX AI Copilot">
-    <span>✦</span><b>AI Copilot</b>
-</button>
+<button class="chat-fab" id="chatFab" aria-label="Open SUMMARIX AI Copilot" type="button"><span>✦</span><b>AI Copilot</b></button>
 
 <aside class="copilot hidden" id="copilot">
-
     <div class="copilot-header">
         <div class="bot-mark">✦</div>
-        <div>
-            <strong>SUMMARIX AI Copilot</strong>
-            <small><i></i> Ready to help</small>
-        </div>
-        <button id="closeChat" aria-label="Close chat">×</button>
+        <div><strong>SUMMARIX AI Copilot</strong><small><i></i> Ready to help</small></div>
+        <button id="closeChat" aria-label="Close chat" type="button">×</button>
     </div>
-
     <div class="copilot-layout">
-
         <aside class="chat-sidebar">
-            <button class="new-chat" id="newChat">＋ New chat</button>
-
-            <div class="sidebar-title">
-                RECENT CHATS
-                <button id="clearHistory">Clear</button>
-            </div>
+            <button class="new-chat" id="newChat" type="button">＋ New chat</button>
+            <div class="sidebar-title">RECENT CHATS <button id="clearHistory" type="button">Clear</button></div>
             <div class="history" id="history"></div>
-
             <div class="sidebar-title">DOCUMENTS</div>
-
-            <label class="add-files">
-                ＋ Add PDF / DOCX
-                <input type="file" id="chatFiles" accept=".pdf,.docx" multiple>
-            </label>
-
+            <label class="add-files" for="chatFiles">＋ Add PDF / DOCX / TXT<input class="chat-file-input" type="file" id="chatFiles" name="documents" accept=".pdf,.docx,.txt" multiple></label>
             <div class="doc-list" id="docList"></div>
-            <button class="privacy" id="privacyClear">⌫ Clear private data</button>
+            <button class="privacy" id="privacyClear" type="button">⌫ Clear private data</button>
         </aside>
-
         <section class="chat-main">
-
             <div class="mode-bar">
-                <button data-mode="general" class="mode active">General</button>
-                <button data-mode="document" class="mode">Document</button>
-                <button data-mode="query" class="mode">Query Engine</button>
-                <button data-mode="study" class="mode">Study</button>
-                <button id="settingsButton" class="settings">⚙</button>
+                <button data-mode="general" class="mode active" type="button">General</button>
+                <button data-mode="document" class="mode" type="button">Document</button>
+                <button data-mode="query" class="mode" type="button">Query Engine</button>
+                <button data-mode="study" class="mode" type="button">Study</button>
+                <button id="settingsButton" class="settings" type="button" aria-label="Copilot settings">⚙</button>
             </div>
-
             <div class="settings-panel hidden" id="settingsPanel">
-                <label>
-                    Language
-                    <select id="language">
-                        <option>English</option>
-                        <option>Hindi</option>
-                        <option>Kannada</option>
-                        <option>Tamil</option>
-                        <option>Telugu</option>
-                    </select>
-                </label>
-
-                <label>
-                    Response depth
-                    <select id="detail">
-                        <option value="concise">Concise</option>
-                        <option value="balanced" selected>Balanced</option>
-                        <option value="detailed">Detailed</option>
-                    </select>
-                </label>
+                <label>Language <select id="language"><option>English</option><option>Hindi</option><option>Kannada</option><option>Tamil</option><option>Telugu</option></select></label>
+                <label>Response depth <select id="detail"><option value="concise">Concise</option><option value="balanced" selected>Balanced</option><option value="detailed">Detailed</option></select></label>
             </div>
-
-            <div class="suggestions" id="suggestions">
-                <button>Explain a topic simply</button>
-                <button>Make a study plan</button>
-                <button>Help me write code</button>
-                <button>Recommend learning videos</button>
-            </div>
-
+            <div class="suggestions" id="suggestions"><button type="button">Explain a topic simply</button><button type="button">Make a study plan</button><button type="button">Help me write code</button><button type="button">Recommend learning videos</button></div>
             <div class="messages" id="messages"></div>
-
-            <div class="study-actions hidden" id="studyActions">
-                <button data-action="quiz">Create Quiz</button>
-                <button data-action="flashcards">Flashcards</button>
-                <button data-action="revision">Revision Plan</button>
-                <button data-action="explain">Explain Simply</button>
-            </div>
-
+            <div class="study-actions hidden" id="studyActions"><button data-action="quiz" type="button">Create Quiz</button><button data-action="flashcards" type="button">Flashcards</button><button data-action="revision" type="button">Revision Plan</button><button data-action="explain" type="button">Explain Simply</button></div>
             <div class="chat-composer">
                 <textarea id="chatInput" placeholder="Ask anything…"></textarea>
-                <div>
-                    <button id="voiceButton" title="Voice input">🎙</button>
-                    <button id="videoButton">▶ Videos</button>
-                    <button id="exportButton">Export</button>
-                    <button class="send" id="sendButton">Send ↑</button>
-                </div>
+                <div><button id="voiceButton" title="Voice input" type="button">🎙</button><button id="videoButton" type="button">▶ Videos</button><button id="exportButton" type="button">Export</button><button class="send" id="sendButton" type="button">Send ↑</button></div>
             </div>
-
         </section>
     </div>
 </aside>
 
 <script>
 const $ = id => document.getElementById(id);
-
-const api = async (url, options = {}) => {
+const api = async (url, options={}) => {
     const response = await fetch(url, options);
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-        throw new Error(data.error || "Something went wrong.");
-    }
-
+    let data;
+    try { data = await response.json(); }
+    catch { throw new Error("The server returned an unexpected response. Please refresh and try again."); }
+    if (!response.ok || !data.success) throw new Error(data.error || "Something went wrong.");
     return data;
 };
-
-const tool = $("tool");
-const modes = document.querySelectorAll(".mode");
-
+const tool = $("tool"), modes = document.querySelectorAll(".mode");
 function toolOptions() {
     $("summaryOptions").classList.toggle("hidden", tool.value !== "summary");
     $("paraphraseOptions").classList.toggle("hidden", tool.value !== "paraphraser");
     $("questionOptions").classList.toggle("hidden", tool.value !== "important_questions");
 }
+tool.addEventListener("change", toolOptions); toolOptions();
 
-tool.addEventListener("change", toolOptions);
-toolOptions();
-
-if ($("copyResult")) {
-    $("copyResult").onclick = async () => {
-        try {
-            await navigator.clipboard.writeText($("resultText").innerText);
-            $("copyResult").textContent = "Copied";
-            setTimeout(() => $("copyResult").textContent = "Copy", 1000);
-        } catch {
-            alert("Unable to copy. Please select and copy the result manually.");
+// Show the selected main-workspace filename immediately, before submitting.
+const workspaceUploadForm = $("workspaceUploadForm");
+const workspaceDocument = $("workspaceDocument");
+const workspaceFileStatus = $("workspaceFileStatus");
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+const ALLOWED_UPLOAD_EXTENSIONS = ["pdf", "docx", "txt"];
+if (workspaceDocument && workspaceFileStatus) {
+    workspaceDocument.addEventListener("change", () => {
+        const file = workspaceDocument.files && workspaceDocument.files[0];
+        workspaceFileStatus.classList.remove("is-error", "is-empty");
+        if (!file) {
+            workspaceFileStatus.textContent = "No file selected yet.";
+            workspaceFileStatus.classList.add("is-empty");
+            return;
         }
-    };
-}
-
-if ($("askDocument")) {
-    $("askDocument").onclick = async () => {
-        const question = $("documentQuestion").value.trim();
-        const box = $("documentAnswer");
-
-        if (!question) return;
-
-        box.classList.remove("hidden");
-        box.textContent = "Searching your document…";
-
-        try {
-            const data = await api("/api/document-question", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({question})
-            });
-
-            box.textContent = data.answer;
-        } catch (error) {
-            box.textContent = error.message;
+        const extension = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
+        if (!ALLOWED_UPLOAD_EXTENSIONS.includes(extension)) {
+            workspaceFileStatus.textContent = "Unsupported file type. Choose a PDF, DOCX, or TXT file.";
+            workspaceFileStatus.classList.add("is-error");
+            workspaceDocument.value = "";
+            return;
         }
-    };
+        if (file.size > MAX_UPLOAD_BYTES) {
+            workspaceFileStatus.textContent = "File is larger than 25 MB. Choose a smaller file.";
+            workspaceFileStatus.classList.add("is-error");
+            workspaceDocument.value = "";
+            return;
+        }
+        workspaceFileStatus.textContent = `Selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
+    });
 }
+if (workspaceUploadForm) {
+    workspaceUploadForm.addEventListener("submit", event => {
+        const file = workspaceDocument && workspaceDocument.files && workspaceDocument.files[0];
+        if (file && file.size > MAX_UPLOAD_BYTES) {
+            event.preventDefault();
+            workspaceFileStatus.textContent = "File is larger than 25 MB. Choose a smaller file.";
+            workspaceFileStatus.classList.add("is-error");
+        }
+    });
+}
+if ($("copyResult")) $("copyResult").onclick = async () => {
+    try { await navigator.clipboard.writeText($("resultText").innerText); $("copyResult").textContent = "Copied"; setTimeout(() => $("copyResult").textContent = "Copy", 1000); }
+    catch { alert("Could not copy automatically. Please select and copy the result manually."); }
+};
+if ($("askDocument")) $("askDocument").onclick = async () => {
+    const q = $("documentQuestion").value.trim(), box = $("documentAnswer"); if (!q) return;
+    box.classList.remove("hidden"); box.textContent = "Searching your document…";
+    try { box.textContent = (await api("/api/document-question", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({question:q})})).answer; }
+    catch(e) { box.textContent = e.message; }
+};
 
-let conversation = [];
-let conversationId = null;
-let mode = "general";
-let documents = [];
-
-const preferences = () => ({
-    language: $("language").value,
-    detail: $("detail").value
-});
-
-function bubble(role, text, sources = []) {
-    const box = document.createElement("article");
-    box.className = `message ${role}`;
-
-    const body = document.createElement("div");
-    body.textContent = text;
-    box.append(body);
-
-    if (sources.length) {
-        const sourceBox = document.createElement("small");
-        sourceBox.className = "sources";
-        sourceBox.textContent = "Sources: " + sources.join(" · ");
-        box.append(sourceBox);
-    }
-
+let conversation = [], conversationId = null, mode = "general", documents = [];
+const preferences = () => ({language:$("language").value, detail:$("detail").value});
+function bubble(role, text, sources=[]) {
+    const box = document.createElement("article"); box.className = `message ${role}`;
+    const body = document.createElement("div"); body.textContent = text; box.append(body);
+    if (sources.length) { const s = document.createElement("small"); s.className = "sources"; s.textContent = "Sources: " + sources.join(" · "); box.append(s); }
     if (role === "assistant" && "speechSynthesis" in window) {
-        const speak = document.createElement("button");
-        speak.className = "speak";
-        speak.textContent = "🔊 Listen";
-        speak.onclick = () => speechSynthesis.speak(
-            new SpeechSynthesisUtterance(text)
-        );
-        box.append(speak);
+        const speak = document.createElement("button"); speak.className = "speak"; speak.type = "button"; speak.textContent = "🔊 Listen";
+        speak.onclick = () => speechSynthesis.speak(new SpeechSynthesisUtterance(text)); box.append(speak);
     }
-
-    $("messages").append(box);
-    $("messages").scrollTop = $("messages").scrollHeight;
-
-    return box;
+    $("messages").append(box); $("messages").scrollTop = $("messages").scrollHeight; return box;
 }
-
 function render() {
     $("messages").innerHTML = "";
-
-    if (!conversation.length) {
-        bubble(
-            "assistant",
-            mode === "document"
-                ? "Add a document, then ask a question. I will cite the relevant pages."
-                : "Hello! I’m your SUMMARIX AI Copilot. What would you like to learn or create?"
-        );
-    } else {
-        conversation.forEach(message =>
-            bubble(message.role, message.content, message.sources || [])
-        );
-    }
+    if (!conversation.length) bubble("assistant", mode === "document" ? "Add a document, then ask a question. I will cite the relevant pages." : "Hello! I’m your SUMMARIX AI Copilot. What would you like to learn or create?");
+    else conversation.forEach(m => bubble(m.role, m.content, m.sources || []));
 }
-
 function setMode(next) {
     mode = next;
-
-    modes.forEach(button => {
-        button.classList.toggle("active", button.dataset.mode === mode);
-    });
-
+    modes.forEach(button => button.classList.toggle("active", button.dataset.mode === mode));
     $("studyActions").classList.toggle("hidden", mode !== "study");
     $("suggestions").classList.toggle("hidden", conversation.length > 0);
-
-    if (mode === "document") {
-        $("chatInput").placeholder = "Ask about your selected documents…";
-    } else if (mode === "query") {
-        $("chatInput").placeholder = "Search and query your selected documents…";
-    } else if (mode === "study") {
-        $("chatInput").placeholder = "Enter a topic or choose a study action…";
-    } else {
-        $("chatInput").placeholder = "Ask anything…";
-    }
-
+    if (mode === "document") $("chatInput").placeholder = "Ask about your selected documents…";
+    else if (mode === "query") $("chatInput").placeholder = "Search and query your selected documents…";
+    else if (mode === "study") $("chatInput").placeholder = "Enter a topic or choose a study action…";
+    else $("chatInput").placeholder = "Ask anything…";
     render();
 }
-
-modes.forEach(button => {
-    button.onclick = () => setMode(button.dataset.mode);
-});
-
-function addMessage(role, content, sources = []) {
-    conversation.push({role, content, sources});
-    conversation = conversation.slice(-20);
-    bubble(role, content, sources);
-    $("suggestions").classList.add("hidden");
+modes.forEach(b => b.onclick = () => setMode(b.dataset.mode));
+function addMessage(role, content, sources=[]) {
+    conversation.push({role, content, sources}); conversation = conversation.slice(-20);
+    bubble(role, content, sources); $("suggestions").classList.add("hidden");
 }
-
 async function loadHistory() {
     try {
-        const data = await api("/api/conversations");
-        const list = $("history");
-        list.innerHTML = "";
-
-        data.conversations.forEach(item => {
-            const button = document.createElement("button");
-            button.textContent = item.title;
-
-            button.onclick = async () => {
-                try {
-                    const result = await api(`/api/conversations/${item.id}`);
-                    conversation = result.messages;
-                    conversationId = item.id;
-                    render();
-                } catch (error) {
-                    alert(error.message);
-                }
+        const data = await api("/api/conversations"); const list = $("history"); list.innerHTML = "";
+        data.conversations.forEach(c => {
+            const b = document.createElement("button"); b.type = "button"; b.textContent = c.title;
+            b.onclick = async () => {
+                try { const x = await api(`/api/conversations/${encodeURIComponent(c.id)}`); conversation = x.messages; conversationId = c.id; render(); }
+                catch (e) { alert(e.message); }
             };
-
-            list.append(button);
+            list.append(b);
         });
-    } catch (error) {
-        console.error("Unable to load chat history:", error);
-    }
+    } catch(e) { console.warn("Could not load chat history:", e.message); }
 }
-
 async function send() {
-    const text = $("chatInput").value.trim();
-    if (!text) return;
-
-    addMessage("user", text);
-    $("chatInput").value = "";
-
-    const pending = bubble("assistant", "Thinking…");
-    $("sendButton").disabled = true;
-
+    const text = $("chatInput").value.trim(); if (!text) return;
+    addMessage("user", text); $("chatInput").value = "";
+    const pending = bubble("assistant", "Thinking…"); $("sendButton").disabled = true;
     try {
-        const data = await api("/api/chat", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                messages: conversation,
-                conversation_id: conversationId,
-                mode,
-                preferences: preferences()
-            })
-        });
-
-        pending.remove();
-        conversationId = data.conversation_id;
-        addMessage("assistant", data.answer, data.sources);
-        loadHistory();
-    } catch (error) {
-        pending.textContent = error.message;
-    } finally {
-        $("sendButton").disabled = false;
-    }
+        const data = await api("/api/chat", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({messages:conversation, conversation_id:conversationId, mode, preferences:preferences()})});
+        pending.remove(); conversationId = data.conversation_id; addMessage("assistant", data.answer, data.sources); loadHistory();
+    } catch(e) { pending.textContent = e.message; }
+    finally { $("sendButton").disabled = false; }
 }
-
 $("sendButton").onclick = send;
-
-$("chatInput").onkeydown = event => {
-    if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        send();
-    }
-};
-
-document.querySelectorAll(".suggestions button").forEach(button => {
-    button.onclick = () => {
-        $("chatInput").value = button.textContent;
-        send();
-    };
+$("chatInput").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
+document.querySelectorAll(".suggestions button").forEach(b => b.onclick = () => { $("chatInput").value = b.textContent; send(); });
+document.querySelectorAll(".study-actions button").forEach(b => b.onclick = async () => {
+    const topic = $("chatInput").value.trim() || "the selected document";
+    addMessage("user", `${b.textContent}: ${topic}`); const pending = bubble("assistant", "Creating your study material…");
+    try {
+        const d = await api("/api/study", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({action:b.dataset.action, topic, preferences:preferences()})});
+        pending.remove(); addMessage("assistant", d.answer, d.sources);
+    } catch(e) { pending.textContent = e.message; }
 });
-
-document.querySelectorAll(".study-actions button").forEach(button => {
-    button.onclick = async () => {
-        const topic = $("chatInput").value.trim() || "the selected document";
-
-        addMessage("user", `${button.textContent}: ${topic}`);
-
-        const pending = bubble("assistant", "Creating your study material…");
-
-        try {
-            const data = await api("/api/study", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    action: button.dataset.action,
-                    topic,
-                    preferences: preferences()
-                })
-            });
-
-            pending.remove();
-            addMessage("assistant", data.answer, data.sources);
-        } catch (error) {
-            pending.textContent = error.message;
-        }
-    };
-});
-
 async function loadDocuments() {
     try {
-        const data = await api("/api/chat/documents");
-        documents = data.documents;
-
-        const list = $("docList");
-        list.innerHTML = "";
-
-        documents.forEach(documentItem => {
-            const row = document.createElement("div");
-            const name = document.createElement("span");
-            const remove = document.createElement("button");
-
-            name.textContent = "▣ " + documentItem.name;
-            remove.textContent = "×";
-            remove.setAttribute("aria-label", "Remove " + documentItem.name);
-
-            remove.onclick = async () => {
-                try {
-                    await api(`/api/chat/documents/${documentItem.id}`, {
-                        method: "DELETE"
-                    });
-                    await loadDocuments();
-                } catch (error) {
-                    alert(error.message);
-                }
-            };
-
-            row.append(name, remove);
-            list.append(row);
+        const data = await api("/api/chat/documents"); documents = data.documents; const list = $("docList"); list.innerHTML = "";
+        documents.forEach(d => {
+            const row = document.createElement("div"), name = document.createElement("span"), remove = document.createElement("button");
+            name.textContent = "▣ " + d.name; remove.textContent = "×"; remove.type = "button"; remove.setAttribute("aria-label", "Remove " + d.name);
+            remove.onclick = async () => { try { await api(`/api/chat/documents/${encodeURIComponent(d.id)}`, {method:"DELETE"}); await loadDocuments(); } catch(e) { alert(e.message); } };
+            row.append(name, remove); list.append(row);
         });
-    } catch (error) {
-        console.error("Unable to load documents:", error);
-    }
+    } catch(e) { console.warn("Could not load chat documents:", e.message); }
 }
-
-$("chatFiles").onchange = async event => {
-    if (!event.target.files.length) return;
-
-    const form = new FormData();
-
-    [...event.target.files].forEach(file => {
-        form.append("documents", file);
+const chatFiles = $("chatFiles");
+if (chatFiles) chatFiles.addEventListener("change", async e => {
+    const selectedFiles = Array.from(e.target.files || []);
+    if (!selectedFiles.length) return;
+    const allowed = new Set(["pdf", "docx", "txt"]);
+    const invalid = selectedFiles.find(file => {
+        const ext = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
+        return !allowed.has(ext) || file.size > MAX_UPLOAD_BYTES;
     });
-
+    if (invalid) {
+        const ext = invalid.name.includes(".") ? invalid.name.split(".").pop().toLowerCase() : "unknown";
+        alert(!allowed.has(ext) ? `Unsupported file type: ${invalid.name}. Choose PDF, DOCX, or TXT.` : `${invalid.name} is larger than 25 MB.`);
+        e.target.value = "";
+        return;
+    }
+    const form = new FormData();
+    selectedFiles.forEach(file => form.append("documents", file));
     try {
-        await api("/api/chat/documents", {
-            method: "POST",
-            body: form
-        });
-
+        await api("/api/chat/documents", {method:"POST", body:form});
         await loadDocuments();
         setMode("document");
-    } catch (error) {
-        alert(error.message);
+    } catch(err) {
+        alert(err.message);
+    } finally {
+        e.target.value = "";
     }
-
-    event.target.value = "";
-};
-
+});
 $("videoButton").onclick = async () => {
-    const query = $("chatInput").value.trim() || conversation.at(-1)?.content;
-    if (!query) return;
-
-    bubble("user", `Find YouTube videos about ${query}`);
-
+    const q = $("chatInput").value.trim() || conversation.at(-1)?.content; if (!q) return;
+    bubble("user", `Find YouTube videos about ${q}`);
     try {
-        const data = await api("/api/chat/videos", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({query})
-        });
-
-        data.videos.forEach(video => {
-            const link = document.createElement("a");
-            link.className = "video-card";
-            link.href = video.url;
-            link.target = "_blank";
-            link.rel = "noopener";
-            link.textContent = `▶ ${video.title} — ${video.channel}`;
-            $("messages").append(link);
-        });
-    } catch (error) {
-        bubble("assistant", error.message);
-    }
+        const d = await api("/api/chat/videos", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({query:q})});
+        d.videos.forEach(v => { const a = document.createElement("a"); a.className = "video-card"; a.href = v.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = `▶ ${v.title} — ${v.channel}`; $("messages").append(a); });
+    } catch(e) { bubble("assistant", e.message); }
 };
-
-$("newChat").onclick = () => {
-    conversation = [];
-    conversationId = null;
-    setMode("general");
-};
-
+$("newChat").onclick = () => { conversation = []; conversationId = null; setMode("general"); };
 $("clearHistory").onclick = async () => {
     if (!confirm("Delete all saved chat history?")) return;
-
-    try {
-        await api("/api/conversations", {method: "DELETE"});
-        conversation = [];
-        conversationId = null;
-        render();
-        await loadHistory();
-    } catch (error) {
-        alert(error.message);
-    }
+    try { await api("/api/conversations", {method:"DELETE"}); conversation = []; conversationId = null; render(); await loadHistory(); }
+    catch(e) { alert(e.message); }
 };
-
 $("privacyClear").onclick = async () => {
-    conversation = [];
-    conversationId = null;
-
-    try {
-        await api("/api/chat/documents", {method: "DELETE"});
-        await loadDocuments();
-    } catch (error) {
-        alert(error.message);
-    }
-
-    render();
+    conversation = []; conversationId = null; render();
+    try { await api("/api/chat/documents", {method:"DELETE"}); await loadDocuments(); }
+    catch(e) { alert(e.message); }
 };
-
-$("settingsButton").onclick = () => {
-    $("settingsPanel").classList.toggle("hidden");
-};
-
+$("settingsButton").onclick = () => $("settingsPanel").classList.toggle("hidden");
 $("exportButton").onclick = async () => {
-    const format = prompt("Export format: txt, docx, or pdf", "txt");
-
-    if (!format || !["txt", "docx", "pdf"].includes(format.toLowerCase())) {
-        return;
-    }
-
+    const format = prompt("Export format: txt, docx, or pdf", "txt"); if (!format || !["txt", "docx", "pdf"].includes(format.toLowerCase())) return;
     try {
-        const response = await fetch("/api/chat/export", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                messages: conversation,
-                format: format.toLowerCase()
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error("Could not export this chat.");
-        }
-
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(await response.blob());
-
-        link.href = url;
-        link.download = `summarix-chat.${format.toLowerCase()}`;
-        link.click();
-
-        URL.revokeObjectURL(url);
-    } catch (error) {
-        alert(error.message);
-    }
+        const r = await fetch("/api/chat/export", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({messages:conversation, format:format.toLowerCase()})});
+        if (!r.ok) throw new Error("Export failed. Please try again.");
+        const a = document.createElement("a"), objectUrl = URL.createObjectURL(await r.blob());
+        a.href = objectUrl; a.download = `summarix-chat.${format.toLowerCase()}`; document.body.append(a); a.click(); a.remove(); URL.revokeObjectURL(objectUrl);
+    } catch(e) { alert(e.message); }
 };
-
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
 $("voiceButton").onclick = () => {
-    if (!Recognition) {
-        alert("Voice input is supported in Chrome and Edge.");
-        return;
-    }
-
-    const recognition = new Recognition();
-    recognition.lang = $("language").value === "Hindi" ? "hi-IN" : "en-US";
-
-    recognition.onresult = event => {
-        $("chatInput").value += event.results[0][0].transcript;
-    };
-
-    recognition.start();
+    if (!Recognition) return alert("Voice input is supported in Chrome and Edge.");
+    const r = new Recognition(); r.lang = $("language").value === "Hindi" ? "hi-IN" : "en-US";
+    r.onresult = e => { $("chatInput").value += e.results[0][0].transcript; }; r.start();
 };
-
-function openCopilot() {
-    $("copilot").classList.remove("hidden");
-    $("chatInput").focus();
+function openCopilot() { $("copilot").classList.remove("hidden"); $("chatInput").focus(); }
+$("openChat").onclick = openCopilot; $("chatFab").onclick = openCopilot;
+$("closeChat").onclick = () => $("copilot").classList.add("hidden");
+// Profile dropdown interactions
+const profileMenuButton = $("profileMenuButton");
+const profileDropdown = $("profileDropdown");
+const profileMenuWrap = $("profileMenuWrap");
+function closeProfileMenu() {
+    if (!profileMenuButton || !profileDropdown) return;
+    profileDropdown.classList.remove("open");
+    profileMenuButton.setAttribute("aria-expanded", "false");
 }
-
-$("openChat").onclick = openCopilot;
-$("chatFab").onclick = openCopilot;
-
-$("closeChat").onclick = () => {
-    $("copilot").classList.add("hidden");
-};
-
-render();
-loadHistory();
-loadDocuments();
+if (profileMenuButton && profileDropdown && profileMenuWrap) {
+    profileMenuButton.addEventListener("click", event => {
+        event.stopPropagation();
+        const isOpen = profileDropdown.classList.toggle("open");
+        profileMenuButton.setAttribute("aria-expanded", String(isOpen));
+    });
+    document.addEventListener("click", event => {
+        if (!profileMenuWrap.contains(event.target)) closeProfileMenu();
+    });
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+            closeProfileMenu();
+            profileMenuButton.focus();
+        }
+    });
+}
+render(); loadHistory(); loadDocuments();
 </script>
-
 </body>
 </html>

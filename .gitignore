@@ -24,3 +24,7 @@ runtime_state/
 # OS files
 .DS_Store
 Thumbs.db
+# Local databases, backups, and generated user data
+backups/
+*.bak
+saved_results/

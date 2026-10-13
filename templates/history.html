@@ -1135,8 +1135,20 @@
                                             {{ extension[:5]|upper }}
                                         </span>
                                         <div style="min-width:0">
-                                            <span class="file-name" title="{{ filename }}">{{ filename }}</span>
-                                            <span class="file-meta">Uploaded document</span>
+                                 {% if document.kind|default('document') == 'result' %}
+    <a
+        class="file-name"
+        title="Open saved AI result"
+        href="{{ url_for('view_saved_result', result_id=document.result_id) }}"
+    >{{ filename }}</a>
+{% else %}
+    <span class="file-name" title="{{ filename }}">{{ filename }}</span>
+{% endif %}
+                                            <span class="file-meta">
+    {{ 'Saved AI result · Click to open'
+       if document.kind|default('document') == 'result'
+       else 'Uploaded document' }}
+</span>
                                         </div>
                                     </div>
                                 </td>
