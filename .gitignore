@@ -28,3 +28,10 @@ Thumbs.db
 backups/
 *.bak
 saved_results/
+
+# Local helper scripts
+check_database.py
+check_user_schema.py
+install_saved_results.py
+reset_admin_password.py
+test_gemini.py
